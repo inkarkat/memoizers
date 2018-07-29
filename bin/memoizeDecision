@@ -6,7 +6,8 @@ printUsage()
 Query the user whether ACTION should be performed on SUBJECT to turn it into
 STATE, and memorize the decision. If later again called (with the same GROUP),
 the decision is remembered and the user is not queried again.
-Returns 0 if ACTION should be performed, 1 if not, 2 on invocation error.
+Returns 0 if ACTION should be performed, 1 if not, 2 on invocation error; 3 if
+memoization fails.
 HELPTEXT
     printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -t|--state STATE -a|--action ACTION [-?|-h|--help]'
 }
@@ -33,20 +34,80 @@ if [ $# -gt 0 -o ! "$group" -o ! "$subject" -o ! "$state" -o ! "$action" ]; then
     exit 2
 fi
 
-MARKER_FILESPEC="${TEMP:-/tmp}/$group"
 
-if [ -e "$MARKER_FILESPEC" ] && [ "$(find "$MARKER_FILESPEC" -mmin -15)" ]; then
-    printf '%s does not %s. %s now.\n' "$subject" "$state" "${action/\[*\]/ing}"
-    exit 0
-else
-    < /dev/tty read -p "$subject does not $state. ${action//[\[\]]/}? (y/n/a) " CHOICE
-fi
+readonly MARKER_FILESPEC="${TEMP:-/tmp}/$group"
 
-if [ "$CHOICE" = 'a' ]; then
-    touch "$MARKER_FILESPEC"
-    exit 0
-elif [ "$CHOICE" = 'y' ]; then
-    exit 0
-else
-    exit 1
-fi
+writeMarker()
+{
+    local subject=${1:?}; shift
+    local literalSubjectPattern=$(printf %s "$subject" | sed -e 's/[][\$*.^/]/\\&/g')
+    local exitStatus=${1:?}; shift
+    local isForever=$1; shift
+    local forever=4294967295; [ "$isForever" ] || forever=$(date +%s)
+
+    [ -r "$MARKER_FILESPEC" ] || echo > "$MARKER_FILESPEC"  # Need to write at least one line so that sed does processing.
+    sed -i -e "/^${literalSubjectPattern}\\t/d" -e "\$a${subject}	${exitStatus}	${forever}" "$MARKER_FILESPEC" || exit 3
+    exit $exitStatus
+}
+
+hasMarker()
+{
+    [ -e "$MARKER_FILESPEC" ] || return 1
+
+    local subject=${1:?}; shift
+    local literalSubjectPattern=$(printf %s "$subject" | sed -e 's/[][\$*.^/]/\\&/g')
+
+    # Get the $subject line, with fallback to "*".
+    local line=$(sed -n -e "/^${literalSubjectPattern}\\t\\|^\\*\\t/H" -e '${ g; s/^\n//; s/^\*\t.*\n//; s/\n\*\t.*$//; /./p }' "$MARKER_FILESPEC")
+    [ "$line" ] || return 1
+
+    IFS=$'\t' read -r readSubject markerExitStatus markerTimestamp <<< "$line"
+
+    local now=$(date +%s)
+    [ $markerTimestamp -ge $((now - 900)) ]	# Marker is valid for 15 minutes.
+}
+
+
+while :
+do
+    if hasMarker "$subject"; then
+	if [ $markerExitStatus -eq 0 ]; then
+	    printf '%s does not %s. Will %s now.\n' "$subject" "$state" "$action"
+	else
+	    printf '%s does not %s. Do not %s.\n' "$subject" "$state" "$action"
+	fi
+	exit $markerExitStatus
+    else
+	printf -v query "$subject does not $state. ${action}?"
+	< /dev/tty read -p "$query ([c]onfirm each / [y]es / [a]ny / a[l]ways / [A]ny always / [d]ecline each / [n]o / n[o]ne / ne[v]er / [N]one never / [h]elp) " CHOICE
+    fi
+
+    case "$CHOICE" in
+	h)  cat <<EOF
+[c]onfirm each: Accept once; continue asking for this particular $subject, even
+                if it occurs again soon.
+[y]es         : Only this particular $subject, now and for a brief timespan.
+[a]ny         : Every $subject in $group, now and for a brief timespan.
+a[l]ways      : This particular $subject, now and in eternity.
+[A]ny always  : Every $subject in $group, now and in eternity.
+
+[d]ecline each: Not this one, and continue asking for this particular $subject,
+                even if it occurs again soon.
+[n]o          : Not this particular $subject, now and not soon.
+n[o]ne        : No $subject in $group, now and not soon.
+ne[v]er       : Not this particular $subject, now and also never in eternity.
+[N]one never  : Every $subject in $group, not now and also never in eternity.
+EOF
+	    ;;
+	c)  exit 0;;
+	y)  writeMarker "$subject" 0 '';;
+	a)  writeMarker '*'	   0 '';;
+	l)  writeMarker "$subject" 0 t;;
+	A)  writeMarker '*'	   0 t;;
+	d)  exit 1;;
+	n)  writeMarker "$subject" 1 '';;
+	o)  writeMarker '*'	   1 '';;
+	v)  writeMarker "$subject" 1 t;;
+	N)  writeMarker '*'	   1 t;;
+    esac
+done
