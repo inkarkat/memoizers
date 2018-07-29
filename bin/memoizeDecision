@@ -1,0 +1,52 @@
+#!/bin/bash
+
+printUsage()
+{
+    cat <<HELPTEXT
+Query the user whether ACTION should be performed on SUBJECT to turn it into
+STATE, and memorize the decision. If later again called (with the same GROUP),
+the decision is remembered and the user is not queried again.
+Returns 0 if ACTION should be performed, 1 if not, 2 on invocation error.
+HELPTEXT
+    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -t|--state STATE -a|--action ACTION [-?|-h|--help]'
+}
+
+group=
+subject=
+state=
+action=
+while [ $# -ne 0 ]
+do
+    case "$1" in
+	--memoize-group|-g)	shift; group="$1"; shift;;
+	--subject|-s)		shift; subject="$1"; shift;;
+	--state|-t)		shift; state="$1"; shift;;
+	--action|-a)		shift; action="$1"; shift;;
+	--help|-h|-\?)	shift; printUsage "$0"; exit 0;;
+	--)		shift; break;;
+	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
+	*)		break;;
+    esac
+done
+if [ $# -gt 0 -o ! "$group" -o ! "$subject" -o ! "$state" -o ! "$action" ]; then
+    printUsage "$0"
+    exit 2
+fi
+
+MARKER_FILESPEC="${TEMP:-/tmp}/$group"
+
+if [ -e "$MARKER_FILESPEC" ] && [ "$(find "$MARKER_FILESPEC" -mmin -15)" ]; then
+    printf '%s does not %s. %s now.\n' "$subject" "$state" "${action/\[*\]/ing}"
+    exit 0
+else
+    < /dev/tty read -p "$subject does not $state. ${action//[\[\]]/}? (y/n/a) " CHOICE
+fi
+
+if [ "$CHOICE" = 'a' ]; then
+    touch "$MARKER_FILESPEC"
+    exit 0
+elif [ "$CHOICE" = 'y' ]; then
+    exit 0
+else
+    exit 1
+fi
