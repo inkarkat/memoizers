@@ -9,13 +9,14 @@ the decision is remembered and the user is not queried again.
 Returns 0 if ACTION should be performed, 1 if not, 2 on invocation error; 3 if
 memoization fails.
 HELPTEXT
-    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -t|--state STATE -a|--action ACTION [-?|-h|--help]'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -t|--state STATE -a|--action ACTION [--timespan SECONDS] [-?|-h|--help]'
 }
 
 group=
 subject=
 state=
 action=
+markerValidTimespanInSeconds=900
 while [ $# -ne 0 ]
 do
     case "$1" in
@@ -23,6 +24,7 @@ do
 	--subject|-s)		shift; subject="$1"; shift;;
 	--state|-t)		shift; state="$1"; shift;;
 	--action|-a)		shift; action="$1"; shift;;
+	--timespan)		shift; markerValidTimespanInSeconds="$1"; shift;;
 	--help|-h|-\?)	shift; printUsage "$0"; exit 0;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
@@ -64,7 +66,7 @@ hasMarker()
     IFS=$'\t' read -r readSubject markerExitStatus markerTimestamp <<< "$line"
 
     local now=$(date +%s)
-    [ $markerTimestamp -ge $((now - 900)) ]	# Marker is valid for 15 minutes.
+    [ $markerTimestamp -ge $((now - markerValidTimespanInSeconds)) ]	# Marker is valid for a brief timespan.
 }
 
 
@@ -83,20 +85,24 @@ do
     fi
 
     case "$CHOICE" in
-	h)  cat <<EOF
+	h)
+	    timespanDuration=$(reldate --timespan "$markerValidTimespanInSeconds")
+	    cat <<EOF
 [c]onfirm each: Accept once; continue asking for this particular $subject, even
                 if it occurs again soon.
-[y]es         : Only this particular $subject, now and for a brief timespan.
-[a]ny         : Every $subject in $group, now and for a brief timespan.
+[y]es         : Only this particular $subject, now and for $timespanDuration.
+[a]ny         : Every $subject in $group, now and for $timespanDuration.
 a[l]ways      : This particular $subject, now and in eternity.
 [A]ny always  : Every $subject in $group, now and in eternity.
 
 [d]ecline each: Not this one, and continue asking for this particular $subject,
                 even if it occurs again soon.
-[n]o          : Not this particular $subject, now and not soon.
-n[o]ne        : No $subject in $group, now and not soon.
-ne[v]er       : Not this particular $subject, now and also never in eternity.
+[n]o          : Not this particular $subject, not now and not for $timespanDuration.
+n[o]ne        : No $subject in $group, not now and not for $timespanDuration.
+ne[v]er       : Not this particular $subject, not now and also never in
+		eternity.
 [N]one never  : Every $subject in $group, not now and also never in eternity.
+
 EOF
 	    ;;
 	c)  exit 0;;
