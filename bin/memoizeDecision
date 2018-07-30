@@ -45,10 +45,10 @@ writeMarker()
     local literalSubjectPattern=$(printf %s "$subject" | sed -e 's/[][\$*.^/]/\\&/g')
     local exitStatus=${1:?}; shift
     local isForever=$1; shift
-    local forever=4294967295; [ "$isForever" ] || forever=$(date +%s)
+    local timestamp=4294967295; [ "$isForever" ] || timestamp=$(date +%s)
 
-    [ -r "$MARKER_FILESPEC" ] || echo > "$MARKER_FILESPEC"  # Need to write at least one line so that sed does processing.
-    sed -i -e "/^${literalSubjectPattern}\\t/d" -e "\$a${subject}	${exitStatus}	${forever}" "$MARKER_FILESPEC" || exit 3
+    [ -r "$MARKER_FILESPEC" ] || printf '# SUBJECT\tEXIT STATUS\tTIME STAMP\n' > "$MARKER_FILESPEC"  # Need to write at least one line so that sed does processing; can use that for a descriptive header.
+    sed -i -e "/^${literalSubjectPattern}\\t/d" -e "\$a${subject}	${exitStatus}	${timestamp}" "$MARKER_FILESPEC" || exit 3
     exit $exitStatus
 }
 
@@ -81,12 +81,14 @@ do
 	exit $markerExitStatus
     else
 	printf -v query "$subject does not $state. ${action}?"
-	< /dev/tty read -p "$query ([c]onfirm each / [y]es / [a]ny / a[l]ways / [A]ny always / [d]ecline each / [n]o / n[o]ne / ne[v]er / [N]one never / [h]elp) " CHOICE
+	< /dev/tty read -n 1 -p "$query ([c]onfirm each / [y]es / [a]ny / a[l]ways / [A]ny always / [d]ecline each / [n]o / n[o]ne / ne[v]er / [N]one never / [h]elp) " CHOICE
+	echo
     fi
 
     case "$CHOICE" in
 	h)
-	    timespanDuration=$(reldate --timespan "$markerValidTimespanInSeconds")
+	    timespanDuration=$(reldate --timespan "$markerValidTimespanInSeconds" 2>/dev/null || printf '%d seconds' "$markerValidTimespanInSeconds")
+
 	    cat <<EOF
 [c]onfirm each: Accept once; continue asking for this particular $subject, even
                 if it occurs again soon.
