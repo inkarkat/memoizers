@@ -4,8 +4,12 @@ printUsage()
 {
     cat <<HELPTEXT
 Query the user whether ACTION should be performed on SUBJECT to turn it into
-STATE, and memorize the decision. If later again called (with the same GROUP),
-the decision is remembered and the user is not queried again.
+STATE, and remember the decision. If later (depending on the decision "soon"
+(within 15 minutes), or at any time) again called (with the same GROUP,
+depending on the decision for the same SUBJECT, or any), the decision is
+recalled and the user is not queried again.
+Question to the user is
+    SUBJECT does not STATE. Shall I / Will now / Do not ACTION?
 Returns 0 if ACTION should be performed, 1 if not, 2 on invocation error; 3 if
 memoization fails.
 HELPTEXT
@@ -36,8 +40,9 @@ if [ $# -gt 0 -o ! "$group" -o ! "$subject" -o ! "$state" -o ! "$action" ]; then
     exit 2
 fi
 
-
-readonly MARKER_FILESPEC="${TEMP:-/tmp}/$group"
+readonly CONFIG_DIRSPEC=${XDG_CONFIG_HOME:-~/.config}/memoizeDecision
+[ -d "$CONFIG_DIRSPEC" ] || mkdir -p -- "$CONFIG_DIRSPEC" || { printf >&2 'ERROR: Could not initialize configuration store at %s!\n' "$CONFIG_DIRSPEC"; exit 3; }
+readonly MARKER_FILESPEC="${CONFIG_DIRSPEC}/$group"
 
 writeMarker()
 {
@@ -80,7 +85,7 @@ do
 	fi
 	exit $markerExitStatus
     else
-	printf -v query "$subject does not $state. ${action}?"
+	printf -v query "$subject does not $state. Shall I ${action}?"
 	< /dev/tty read -n 1 -p "$query ([c]onfirm each / [y]es / [a]ny / a[l]ways / [A]ny always / [d]ecline each / [n]o / n[o]ne / ne[v]er / [N]one never / [h]elp) " CHOICE
 	echo
     fi
