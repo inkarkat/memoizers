@@ -11,9 +11,9 @@ recalled and the user is not queried again.
 Question to the user is
     SUBJECT ([VERB] / does not) STATE. Shall I / Will now / Do not ACTION?
 Returns 0 if ACTION should be performed, 1 if not, 2 on invocation error; 3 if
-memoization fails.
+memoization fails or the query times out without a given --default.
 HELPTEXT
-    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--timespan SECONDS] [-?|-h|--help]'
+printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--timespan SECONDS] [--timeout SECONDS] [-d|--default c|y|a|l|A|d|n|o|v|N] [-?|-h|--help]'
 }
 
 group=
@@ -22,6 +22,9 @@ verb='does not'
 state=
 action=
 markerValidTimespanInSeconds=900
+default=
+timeout=
+typeset -a readArgs=()
 while [ $# -ne 0 ]
 do
     case "$1" in
@@ -31,6 +34,14 @@ do
 	--state|-t)		shift; state="$1"; shift;;
 	--action|-a)		shift; action="$1"; shift;;
 	--timespan)		shift; markerValidTimespanInSeconds="$1"; shift;;
+	--timeout)	shift; timeoutPlural=s; [ "$1" = 1 ] && timeoutPlural=; timeout="Within $1 second${timeoutPlural}: "; readArgs+=(-t "$1"); shift;;
+	--default|-d)	shift
+			case "$1" in
+			    c|y|a|l|A|d|n|o|v|N)  default=$1;;
+			    *)	    printf >&2 'ERROR: Invalid default: %s\n' "$1"; exit 2;;
+			esac
+			shift
+			;;
 	--help|-h|-\?)	shift; printUsage "$0"; exit 0;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
@@ -88,8 +99,17 @@ do
 	exit $markerExitStatus
     else
 	printf -v query "$subject $verb $state. Shall I ${action}?"
-	< /dev/tty read -n 1 -p "$query ([c]onfirm each / [y]es / [a]ny $group / a[l]ways / [A]ny $group always / [d]ecline each / [n]o / n[o]ne from $group / ne[v]er / [N]one from $group never / [h]elp) " CHOICE
+	< /dev/tty read "${readArgs[@]}" -n 1 -p "$query (${timeout}[c]onfirm each / [y]es / [a]ny $group / a[l]ways / [A]ny $group always / [d]ecline each / [n]o / n[o]ne from $group / ne[v]er / [N]one from $group never / [h]elp) " CHOICE
+	status=$?
 	echo
+
+	if [ $status -gt 128 ]; then
+	    if [ "$default" ]; then
+		CHOICE=$default
+	    else
+		exit 3
+	    fi
+	fi
     fi
 
     case "$CHOICE" in
