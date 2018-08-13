@@ -86,7 +86,7 @@ do
 	exit $markerExitStatus
     else
 	printf -v query "$subject does not $state. Shall I ${action}?"
-	< /dev/tty read -n 1 -p "$query ([c]onfirm each / [y]es / [a]ny / a[l]ways / [A]ny always / [d]ecline each / [n]o / n[o]ne / ne[v]er / [N]one never / [h]elp) " CHOICE
+	< /dev/tty read -n 1 -p "$query ([c]onfirm each / [y]es / [a]ny $group / a[l]ways / [A]ny $group always / [d]ecline each / [n]o / n[o]ne from $group / ne[v]er / [N]one $group never / [h]elp) " CHOICE
 	echo
     fi
 
