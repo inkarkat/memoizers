@@ -99,9 +99,9 @@ do
 	exit $markerExitStatus
     else
 	printf -v query "$subject $verb $state. Shall I ${action}?"
-	< /dev/tty read "${readArgs[@]}" -n 1 -p "$query (${timeout}[c]onfirm each / [y]es / [a]ny $group / a[l]ways / [A]ny $group always / [d]ecline each / [n]o / n[o]ne from $group / ne[v]er / [N]one from $group never / [h]elp) " CHOICE
+	< /dev/tty read "${readArgs[@]}" -n 1 -p "$query (${timeout}[c]onfirm each / [y]es / [a]ny $group / a[l]ways / [A]ny $group always / [d]ecline each = [q]uit / [n]o / n[o]ne from $group / ne[v]er / [N]one from $group never / [h]elp) " CHOICE
 	status=$?
-	echo
+	echo >&2
 
 	if [ $status -gt 128 ]; then
 	    if [ "$default" ]; then
@@ -140,6 +140,7 @@ EOF
 	l)  writeMarker "$subject" 0 t;;
 	A)  writeMarker '*'	   0 t;;
 	d)  exit 1;;
+	q)  exit 1;;
 	n)  writeMarker "$subject" 1 '';;
 	o)  writeMarker '*'	   1 '';;
 	v)  writeMarker "$subject" 1 t;;
