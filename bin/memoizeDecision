@@ -109,6 +109,8 @@ do
 	    else
 		exit 3
 	    fi
+	elif [ $status -ne 0 ]; then
+	    exit 3
 	fi
     fi
 
