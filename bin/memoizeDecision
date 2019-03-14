@@ -98,10 +98,17 @@ do
 	fi
 	exit $markerExitStatus
     else
-	printf -v query "$subject $verb $state. Shall I ${action}?"
-	< /dev/tty read "${readArgs[@]}" -n 1 -p "$query (${timeout}[c]onfirm each / [y]es / [a]ny $group / a[l]ways / [A]ny $group always / [d]ecline each = [q]uit / [n]o / n[o]ne from $group / ne[v]er / [N]one from $group never / [h]elp) " CHOICE
-	status=$?
-	echo >&2
+	# Force reading directly from terminal / null device if stdin is redirected,
+	# to avoid consuming input.
+	if { exec 0</dev/tty; } 2>/dev/null; then
+	    printf -v query "$subject $verb $state. Shall I ${action}?"
+	    read "${readArgs[@]}" -n 1 -p "$query (${timeout}[c]onfirm each / [y]es / [a]ny $group / a[l]ways / [A]ny $group always / [d]ecline each = [q]uit / [n]o / n[o]ne from $group / ne[v]er / [N]one from $group never / [h]elp) " CHOICE
+	    status=$?
+	    echo >&2
+	else
+	    # When we cannot read from the terminal ("/dev/tty: No such device or address"), use default or abort.
+	    status=129
+	fi
 
 	if [ $status -gt 128 ]; then
 	    if [ "$default" ]; then
