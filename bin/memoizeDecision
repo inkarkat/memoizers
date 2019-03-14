@@ -1,5 +1,14 @@
 #!/bin/bash
 
+: ${MEMOIZEDECISION_QUERY_PREFIX=[01m}
+: ${MEMOIZEDECISION_QUERY_SUFFIX=[0m}
+: ${MEMOIZEDECISION_OPTIONS_PREFIX=[36m}
+: ${MEMOIZEDECISION_OPTIONS_SUFFIX=[0m}
+: ${MEMOIZEDECISION_POSITIVE_PREFIX=[32m}
+: ${MEMOIZEDECISION_POSITIVE_SUFFIX=[0m}
+: ${MEMOIZEDECISION_NEGATIVE_PREFIX=[33m}
+: ${MEMOIZEDECISION_NEGATIVE_SUFFIX=[0m}
+
 printUsage()
 {
     cat <<HELPTEXT
@@ -92,17 +101,19 @@ while :
 do
     if hasMarker "$subject"; then
 	if [ $markerExitStatus -eq 0 ]; then
-	    printf '%s %s %s. Will %s now.\n' "$subject" "$verb" "$state" "$action"
+	    printf '%s%s %s %s. Will %s now.%s\n' "$MEMOIZEDECISION_POSITIVE_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_POSITIVE_SUFFIX"
 	else
-	    printf '%s %s %s. Do not %s.\n' "$subject" "$verb" "$state" "$action"
+	    printf '%s%s %s %s. Do not %s.%s\n' "$MEMOIZEDECISION_NEGATIVE_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_NEGATIVE_SUFFIX"
 	fi
 	exit $markerExitStatus
     else
 	# Force reading directly from terminal / null device if stdin is redirected,
 	# to avoid consuming input.
 	if { exec 0</dev/tty; } 2>/dev/null; then
-	    printf -v query "$subject $verb $state. Shall I ${action}?"
-	    read "${readArgs[@]}" -n 1 -p "$query (${timeout}[c]onfirm each / [y]es / [a]ny $group / a[l]ways / [A]ny $group always / [d]ecline each = [q]uit / [n]o / n[o]ne from $group / ne[v]er / [N]one from $group never / [h]elp) " CHOICE
+	    printf -v query '%s%s %s %s. Shall I %s?%s' "$MEMOIZEDECISION_QUERY_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_QUERY_SUFFIX"
+	    printf -v options '%s(%s[c]onfirm each / [y]es / [a]ny %s / a[l]ways / [A]ny %s always / [d]ecline each = [q]uit / [n]o / n[o]ne from %s / ne[v]er / [N]one from %s never / [h]elp)%s' \
+		"$MEMOIZEDECISION_OPTIONS_PREFIX" "$timeout" "$group" "$group" "$group" "$group" "$MEMOIZEDECISION_OPTIONS_SUFFIX"
+	    read "${readArgs[@]}" -n 1 -p "$query $options " CHOICE
 	    status=$?
 	    echo >&2
 	else
