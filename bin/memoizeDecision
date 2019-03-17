@@ -4,6 +4,8 @@
 : ${MEMOIZEDECISION_QUERY_SUFFIX=[0m}
 : ${MEMOIZEDECISION_OPTIONS_PREFIX=[36m}
 : ${MEMOIZEDECISION_OPTIONS_SUFFIX=[0m}
+: ${MEMOIZEDECISION_OPTION_ACCELERATOR_PREFIX=[[01;36m}
+: ${MEMOIZEDECISION_OPTION_ACCELERATOR_SUFFIX=[0;36m]}
 : ${MEMOIZEDECISION_POSITIVE_PREFIX=[32m}
 : ${MEMOIZEDECISION_POSITIVE_SUFFIX=[0m}
 : ${MEMOIZEDECISION_NEGATIVE_PREFIX=[33m}
@@ -111,7 +113,9 @@ do
 	# to avoid consuming input.
 	if { exec 0</dev/tty; } 2>/dev/null; then
 	    printf -v query '%s%s %s %s. Shall I %s?%s' "$MEMOIZEDECISION_QUERY_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_QUERY_SUFFIX"
-	    printf -v options '%s(%s[c]onfirm each / [y]es / [a]ny %s / a[l]ways / [A]ny %s always / [d]ecline each = [q]uit / [n]o / n[o]ne from %s / ne[v]er / [N]one from %s never / [h]elp)%s' \
+	    p=$MEMOIZEDECISION_OPTION_ACCELERATOR_PREFIX
+	    q=$MEMOIZEDECISION_OPTION_ACCELERATOR_SUFFIX
+	    printf -v options '%s(%s${p}c${q}onfirm each / ${p}y${q}es / ${p}a${q}ny %s / a${p}l${q}ways / ${p}A${q}ny %s always / ${p}d${q}ecline each = ${p}q${q}uit / ${p}n${q}o / n${p}o${q}ne from %s / ne${p}v${q}er / ${p}N${q}one from %s never / ${p}h${q}elp)%s' \
 		"$MEMOIZEDECISION_OPTIONS_PREFIX" "$timeout" "$group" "$group" "$group" "$group" "$MEMOIZEDECISION_OPTIONS_SUFFIX"
 	    read "${readArgs[@]}" -n 1 -p "$query $options " CHOICE
 	    status=$?
