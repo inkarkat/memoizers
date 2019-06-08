@@ -23,6 +23,7 @@ Question to the user is
     SUBJECT ([VERB] / does not) STATE. Shall I / Will now / Do not ACTION?
 Returns 0 if ACTION should be performed, 1 if not, 2 on invocation error; 3 if
 memoization fails or the query times out without a given --default.
+
 HELPTEXT
 printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--timespan SECONDS] [--timeout SECONDS] [-d|--default c|y|a|l|A|d|n|o|v|N] [-?|-h|--help]'
 }
@@ -64,38 +65,28 @@ if [ $# -gt 0 -o ! "$group" -o ! "$subject" -o ! "$state" -o ! "$action" ]; then
     exit 2
 fi
 
-readonly CONFIG_DIRSPEC=${XDG_CONFIG_HOME:-~/.config}/memoizeDecision
-[ -d "$CONFIG_DIRSPEC" ] || mkdir -p -- "$CONFIG_DIRSPEC" || { printf >&2 'ERROR: Could not initialize configuration store at %s!\n' "$CONFIG_DIRSPEC"; exit 3; }
-readonly MARKER_FILESPEC="${CONFIG_DIRSPEC}/$group"
+marker()
+{
+    executionMarker --namespace memoizeDecision --group "$group" --fallback-subject '*' "$@"
+}
 
 writeMarker()
 {
     local subject=${1:?}; shift
-    local literalSubjectPattern=$(printf %s "$subject" | sed -e 's/[][\$*.^/]/\\&/g')
     local exitStatus=${1:?}; shift
-    local isForever=$1; shift
-    local timestamp=4294967295; [ "$isForever" ] || timestamp=$(date +%s)
 
-    [ -r "$MARKER_FILESPEC" ] || printf '# SUBJECT\tEXIT STATUS\tTIME STAMP\n' > "$MARKER_FILESPEC"  # Need to write at least one line so that sed does processing; can use that for a descriptive header.
-    sed -i -e "/^${literalSubjectPattern}\\t/d" -e "\$a${subject}	${exitStatus}	${timestamp}" "$MARKER_FILESPEC" || exit 3
+    typeset -a foreverArgs=()
+    local isForever=$1; shift
+    [ "$isForever" ] && foreverArgs=(--timestamp 4294967295)
+
+    marker --update "$subject" --context "$exitStatus" "${foreverArgs[@]}" || exit 3
     exit $exitStatus
 }
 
 hasMarker()
 {
-    [ -e "$MARKER_FILESPEC" ] || return 1
-
     local subject=${1:?}; shift
-    local literalSubjectPattern=$(printf %s "$subject" | sed -e 's/[][\$*.^/]/\\&/g')
-
-    # Get the $subject line, with fallback to "*".
-    local line=$(sed -n -e "/^${literalSubjectPattern}\\t\\|^\\*\\t/H" -e '${ g; s/^\n//; s/^\*\t.*\n//; s/\n\*\t.*$//; /./p }' "$MARKER_FILESPEC")
-    [ "$line" ] || return 1
-
-    IFS=$'\t' read -r readSubject markerExitStatus markerTimestamp <<< "$line"
-
-    local now=$(date +%s)
-    [ $markerTimestamp -ge $((now - markerValidTimespanInSeconds)) ]	# Marker is valid for a brief timespan.
+    markerExitStatus="$(marker --query "$subject" --within "$markerValidTimespanInSeconds" --get-context)" || return $?
 }
 
 
