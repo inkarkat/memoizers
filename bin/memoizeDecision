@@ -40,6 +40,7 @@ typeset -a readArgs=()
 while [ $# -ne 0 ]
 do
     case "$1" in
+	--help|-h|-\?)	shift; printUsage "$0"; exit 0;;
 	--memoize-group|-g)	shift; group="$1"; shift;;
 	--subject|-s)		shift; subject="$1"; shift;;
 	--verb)			shift; verb="$1"; shift;;
@@ -54,7 +55,6 @@ do
 			esac
 			shift
 			;;
-	--help|-h|-\?)	shift; printUsage "$0"; exit 0;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
