@@ -1,0 +1,90 @@
+#!/bin/bash
+shopt -qs extglob
+
+printUsage()
+{
+    cat <<HELPTEXT
+If COMMAND (SUBJECT if passed) has not yet been executed (within
+VALID-TIMESPAN|TIMESLOT), execute it and record its exit status and output (but
+not error messages) for later recalls (of the same COMMAND / SUBJECT [/ GROUP]).
+HELPTEXT
+    printf 'Usage: %q %s\n' "$(basename "$1")" '[-t|--for VALID-TIMESPAN[SUFFIX]|second|minute|hour|day|week|month|year|every N (seconds|minutes|hours|days|weeks)] [-g|--memoize-group GROUP] [-s|--subject SUBJECT] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+    printf 'Usage: echo COMMANDLINES | %q %s\n' "$(basename "$1")" '[...] [-?|-h|--help]'
+    printf 'Usage: %q %s <<EOF\n  COMMANDLINE\n...\nEOF\n' "$(basename "$1")" '[...]'
+}
+
+validity=
+group=
+subject=
+isNeedEval=
+typeset -a commands=()
+isFromStandardIn=
+while [ $# -ne 0 ]
+do
+    case "$1" in
+	--help|-h|-\?)	shift; printUsage "$0"; exit 0;;
+	--for|-t)	shift
+			case "$1" in
+			    +([0-9])?(s))   validity="${1%s}";;
+			    +([0-9])m)	    validity=$((${1%m} * 60));;
+			    +([0-9])h)	    validity=$((${1%h} * 3600));;
+			    +([0-9])d)	    validity=$((${1%d} * 86400));;
+			esac
+			shift
+			;;
+	--memoize-group|-g)	shift; group="$1"; shift;;
+	--subject|-s)		shift; subject="$1"; shift;;
+	--command|-c)	shift; commands+=(${commands:+;} "$1"); isNeedEval=t; shift;;
+	--)		shift; break;;
+	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
+	*)		break;;
+    esac
+done
+if [ $# -ne 0 ]; then
+    if [ "$isNeedEval" ]; then
+	# Combine --command and SIMPLECOMMAND; need to quote SIMPLECOMMAND to
+	# undo the effects of eval.
+	commands+=(${commands:+;} $(printf '%q ' "$@"))
+    else
+	commands=("$@")
+    fi
+fi
+if [ ${#commands[@]} -eq 0 ]; then
+    isFromStandardIn=t
+    commands=("$(< /dev/stdin)")
+fi
+if [ -z "${commands[*]}" ]; then
+    echo >&2 'ERROR: No COMMAND.'
+    echo >&2
+    printUsage "$0" >&2
+    exit 2
+fi
+
+[ "$subject" ] || subject="${commands[*]}"
+if [ "$namespace" ]; then
+    typeset -a executionMarkerArgs=(--namespace memoizeCall --group "$group")
+else
+    typeset -a executionMarkerArgs=(--group memoizeCall)
+fi
+
+if context="$(executionMarker "${executionMarkerArgs[@]}" --query "$subject" ${validity:+--within "$validity"} --get-context)"; then
+    exitStatus="${context%% *}"
+    output="${context#* }"
+    [ "$output" ] && printf '%s\n' "$output"
+    exit $exitStatus
+fi
+
+
+output="$(
+    if [ "$isFromStandardIn" ]; then
+	printf %s "${commands[@]}" | bash -
+    elif [ "$isNeedEval" ]; then
+	eval "${commands[@]}"
+    else
+	"${commands[@]}"
+    fi
+)"
+exitStatus=$?
+[ "$output" ] && printf '%s\n' "$output"
+executionMarker "${executionMarkerArgs[@]}" --update "$subject" --context "$exitStatus $output"
+exit $exitStatus
