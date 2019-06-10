@@ -59,7 +59,7 @@ if [ -z "${commands[*]}" ]; then
 fi
 
 [ "$subject" ] || subject="${commands[*]}"
-if [ "$namespace" ]; then
+if [ "$group" ]; then
     executionMarkerArgs+=(--namespace memoizeCall --group "$group")
 else
     executionMarkerArgs+=(--group memoizeCall)
