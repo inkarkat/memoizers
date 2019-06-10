@@ -1,0 +1,9 @@
+#!/bin/bash
+
+: ${testMessage=Just a single line}
+: ${testStatus:=0}
+printf "%s${testMessage:+\\n}" "$testMessage"
+printf >&2 "%s${testError:+\\n}" "$testError"
+
+printf "$testStatus %s${testMessage:+\\n}" "$testMessage" > "${BATS_TMPDIR}/lastMessage"
+exit $testStatus
