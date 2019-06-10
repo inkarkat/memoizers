@@ -60,7 +60,7 @@ fi
 
 [ "$subject" ] || subject="${commands[*]}"
 if [ "$group" ]; then
-    executionMarkerArgs+=(--namespace memoizeCall --group "$group")
+    executionMarkerArgs+=(--namespace memoizeCall.d --group "$group")
 else
     executionMarkerArgs+=(--group memoizeCall)
 fi
