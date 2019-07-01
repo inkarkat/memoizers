@@ -21,9 +21,13 @@ depending on the decision for the same SUBJECT, or any), the decision is
 recalled and the user is not queried again.
 Question to the user is
     SUBJECT ([VERB] / does not) STATE. Shall I / Will now / Do not ACTION?
-Returns 0 if ACTION should be performed, 1 if not, 2 on invocation error; 3 if
-memoization fails or the query times out without a given --default.
-
+For automation / testing, the query can be pre-answered by defining
+MEMOIZEDECISION_CHOICE.
+EXIT STATUS:
+    0 if ACTION should be performed
+    1 if not
+    2 on invocation error
+    3 if memoization fails or the query times out without a given --default
 HELPTEXT
 printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--timespan SECONDS] [--timeout SECONDS] [-d|--default c|y|a|l|A|d|n|o|v|N] [-?|-h|--help]'
 }
@@ -102,15 +106,21 @@ do
     else
 	# Force reading directly from terminal / null device if stdin is redirected,
 	# to avoid consuming input.
-	if { exec 0</dev/tty; } 2>/dev/null; then
+	if [ "$MEMOIZEDECISION_CHOICE" ] || { exec 0</dev/tty; } 2>/dev/null; then
 	    printf -v query '%s%s %s %s. Shall I %s?%s' "$MEMOIZEDECISION_QUERY_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_QUERY_SUFFIX"
 	    p=$MEMOIZEDECISION_OPTION_ACCELERATOR_PREFIX
 	    q=$MEMOIZEDECISION_OPTION_ACCELERATOR_SUFFIX
 	    printf -v options "%s(%s${p}c${q}onfirm each / ${p}y${q}es / ${p}a${q}ny %s / a${p}l${q}ways / ${p}A${q}ny %s always / ${p}d${q}ecline each = ${p}q${q}uit / ${p}n${q}o / n${p}o${q}ne from %s / ne${p}v${q}er / ${p}N${q}one from %s never / ${p}h${q}elp)%s" \
 		"$MEMOIZEDECISION_OPTIONS_PREFIX" "$timeout" "$group" "$group" "$group" "$group" "$MEMOIZEDECISION_OPTIONS_SUFFIX"
-	    read "${readArgs[@]}" -n 1 -p "$query $options " CHOICE
-	    status=$?
-	    echo >&2
+	    if [ "$MEMOIZEDECISION_CHOICE" ]; then
+		CHOICE="$MEMOIZEDECISION_CHOICE"
+		printf >&2 '%s%s\n' "$query $options " "$CHOICE"
+		status=0
+	    else
+		read "${readArgs[@]}" -n 1 -p "$query $options " CHOICE
+		status=$?
+		echo >&2
+	    fi
 	else
 	    # When we cannot read from the terminal ("/dev/tty: No such device or address"), use default or abort.
 	    status=129
