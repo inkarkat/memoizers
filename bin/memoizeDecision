@@ -117,7 +117,7 @@ do
 		printf >&2 '%s%s\n' "$query $options " "$CHOICE"
 		status=0
 	    else
-		read "${readArgs[@]}" -n 1 -p "$query $options " CHOICE
+		CHOICE="$(userquery "${readArgs[@]}" -n 1 -p "$query $options ")"
 		status=$?
 		echo >&2
 	    fi
