@@ -1,0 +1,155 @@
+#!/bin/bash
+shopt -qs extglob
+
+printShortUsage()
+{
+    # Note: short followed by long option; if the user knows the short one, she can
+    # skim the long one.
+    printf 'Usage: %q %s\n' "$(basename "$1")" '-f|--file FILE [-t|--for VALID-TIMESPAN[SUFFIX]] [-r|--redirect] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+    printf 'Usage: cat FILE | %q %s\n' "$(basename "$1")" '-f|--file FILE [-t|--for VALID-TIMESPAN[SUFFIX]] [-r|--redirect]'
+}
+printUsage()
+{
+    # This is the short help when launched with no or incorrect arguments.
+    # It is printed to stderr to avoid accidental processing.
+    printShortUsage "$1" >&2
+    printf >&2 'Try %q --help for more information.\n' "$(basename "$1")"
+}
+printLongUsage()
+{
+    # This is the long "man page" when launched with the help argument.
+    # It is printed to stdout to allow paging with 'more'.
+    cat <<HELPDESCRIPTION
+If FILE does not exist or its last modification is older than VALID-TIMESPAN,
+execute COMMAND / take the input from standard input to update the FILE.
+HELPDESCRIPTION
+    echo
+    printShortUsage "$1"
+    cat <<HELPTEXT
+    --file|-f FILE	The target filespec to check and potentially update.
+    --for|-t VALID-TIMESPAN[SUFFIX]
+			If the last modification of FILE is older, execute
+			COMMAND to update the FILE. VALID-TIMESPAN is
+			NUMBER[SUFFIX], where SUFFIX may be 's' for seconds (the
+			default), 'm' for minutes, 'h' for hours or 'd' for
+			days.
+    --redirect|-r	Directly redirect standard output of COMMAND into FILE
+			(if the command succeeds). Saves you from including the
+			redirection in COMMANDLINE and makes it possible to use
+			SIMPLECOMMAND.
+    --command|-c CMD	The command line to be executed to update the FILE (as a
+			side effect, or by redirecting its output into it). When
+			this is a simple command, it can also be passed as such.
+			Inside CMD, {} is replaced with FILE (so that you don't
+			need to specify it twice).
+EXIT STATUS:
+    0	FILE exists (and is recent enough), or had to be updated and that
+	succeeded.
+    2	Bad invocation, wrong or missing command-line arguments.
+    3	Internal error or failed assertion.
+    4	The COMMAND did not update the FILE as a side effect.
+    *	Any error from COMMAND is returned as-is.
+
+Example:
+HELPTEXT
+    printf '%q %s\n' "$(basename "$1")" '--foo bar /tmp/foobar'
+}
+
+file=
+validity=
+isRedirect=
+isNeedEval=
+typeset -a commands=()
+while [ $# -ne 0 ]
+do
+    case "$1" in
+	--help|-h|-\?)	shift; printUsage "$0"; exit 0;;
+	--file|-f)	shift; file="$1"; shift;;
+	--for|-t)	shift
+			case "$1" in
+			    +([0-9])?(s))   validity="${1%s}";;
+			    +([0-9])m)	    validity=$((${1%m} * 60));;
+			    +([0-9])h)	    validity=$((${1%h} * 3600));;
+			    +([0-9])d)	    validity=$((${1%d} * 86400));;
+			    *)		    printf >&2 'ERROR: Illegal timespan: %s\n' "$1"; exit 2;;
+			esac
+			shift
+			;;
+	--redirect|-r)	shift; isRedirect=t;;
+	--command|-c)	shift; commands+=(${commands:+;} "$1"); isNeedEval=t; shift;;
+	--)		shift; break;;
+	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
+	*)		break;;
+    esac
+done
+if [ $# -ne 0 ]; then
+    if [ "$isNeedEval" ]; then
+	# Combine --command and SIMPLECOMMAND; need to quote SIMPLECOMMAND to
+	# undo the effects of eval.
+	printf -v quotedSimpleCommand '%q ' "$@}"
+	commands+=(${commands:+;} "${quotedSimpleCommand//\\\{\\\}/\{\}}")	# %q escapes {}, we don't want that to have it interpolated later.
+    else
+	commands=("$@")
+    fi
+fi
+if [ -z "$file" ]; then
+    echo >&2 'ERROR: No FILE passed.'
+    echo >&2
+    printShortUsage "$0" >&2
+    exit 2
+fi
+
+
+update()
+{
+    typeset -a interpolatedCommands=("${commands[@]//\{\}/$file}")
+    if [ "$isNeedEval" ]; then
+	eval "${interpolatedCommands[@]}"
+    else
+	"${interpolatedCommands[@]}"
+    fi
+}
+getModificationEpoch()
+{
+    stat -L --format %Y "${1:?}"
+}
+
+
+needsUpdate=
+fileModificationEpoch=-1
+if [ -e "$file" ]; then
+    now="$(date +%s)" || exit 3
+    fileModificationEpoch="$(getModificationEpoch "$file")" || exit 3
+
+    [ $((fileModificationEpoch + validity)) -ge "$now" ] || needsUpdate=t
+else
+    needsUpdate=t
+fi
+
+if [ ${#commands[@]} -eq 0 ]; then
+    [ "$needsUpdate" ] || exec cat >/dev/null 2>&1
+
+    isNeedEval=t
+    commands=('cat > "$file"')
+fi
+[ "$needsUpdate" ] || exit 0
+
+
+if [ "$isRedirect" ]; then
+    TMPFILE="$(mktemp --tmpdir "$(basename -- "$0")-XXXXXX" 2>/dev/null || echo "${TEMP:-/tmp}/$(basename -- "$0").$$$RANDOM")"
+    cleanup()
+    {
+	rm -f -- "$TMPFILE" 2>/dev/null
+    }
+    [ "${DEBUG:-}" ] || trap 'cleanup' EXIT
+
+    update > "$TMPFILE" || exit $?
+    cp --force -- "$TMPFILE" "$file" || exit 3
+else
+    update || exit $?
+
+    if [ ! -e "$file" ] || [ "$fileModificationEpoch" -eq "$(getModificationEpoch "$file")" ]; then
+	# FILE was not created / updated as a side effect of COMMAND.
+	exit 4
+    fi
+fi
