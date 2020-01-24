@@ -5,8 +5,8 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" '-f|--file FILE [-t|--for VALID-TIMESPAN[SUFFIX]] [-r|--redirect] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
-    printf 'Usage: cat FILE | %q %s\n' "$(basename "$1")" '-f|--file FILE [-t|--for VALID-TIMESPAN[SUFFIX]] [-r|--redirect]'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '[-v|--verbose] -f|--file FILE [-t|--for VALID-TIMESPAN[SUFFIX]] [-r|--redirect] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+    printf 'Usage: cat FILE | %q %s\n' "$(basename "$1")" '[-v|--verbose] -f|--file FILE [-t|--for VALID-TIMESPAN[SUFFIX]] [-r|--redirect]'
 }
 printUsage()
 {
@@ -26,6 +26,7 @@ HELPDESCRIPTION
     echo
     printShortUsage "$1"
     cat <<HELPTEXT
+    --verbose|-v	Print additional information about the FILE state.
     --file|-f FILE	The target filespec to check and potentially update.
     --for|-t VALID-TIMESPAN[SUFFIX]
 			If the last modification of FILE is older, execute
@@ -55,6 +56,7 @@ HELPTEXT
     printf '%q %s\n' "$(basename "$1")" '--foo bar /tmp/foobar'
 }
 
+isVerbose=
 file=
 validity=
 isRedirect=
@@ -64,6 +66,7 @@ while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printUsage "$0"; exit 0;;
+	--verbose|-v)	shift; isVerbose=t;;
 	--file|-f)	shift; file="$1"; shift;;
 	--for|-t)	shift
 			case "$1" in
@@ -122,8 +125,11 @@ if [ -e "$file" ]; then
     fileModificationEpoch="$(getModificationEpoch "$file")" || exit 3
 
     [ $((fileModificationEpoch + validity)) -ge "$now" ] || needsUpdate=t
+
+    [ "$isVerbose" ] && [ ! "$needsUpdate" ] && printf '%s does not need an update yet; last update was %d second(s) ago.\n' "$file" "$((now - fileModificationEpoch))"
 else
     needsUpdate=t
+    [ "$isVerbose" ] && printf '%s does not exist yet.\n' "$file"
 fi
 
 if [ ${#commands[@]} -eq 0 ]; then
@@ -150,6 +156,7 @@ else
 
     if [ ! -e "$file" ] || [ "$fileModificationEpoch" -eq "$(getModificationEpoch "$file")" ]; then
 	# FILE was not created / updated as a side effect of COMMAND.
+	[ "$isVerbose" ] && printf >&2 'ERROR: %s was not updated as a side effect of executing COMMAND.\n' "$file"
 	exit 4
     fi
 fi
