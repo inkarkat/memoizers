@@ -125,12 +125,16 @@ getModificationEpoch()
 needsUpdate=
 fileModificationEpoch=-1
 if [ -e "$file" ]; then
-    [ "$now" ] || now="$(date +%s)" || exit 3
-    fileModificationEpoch="$(getModificationEpoch "$file")" || exit 3
+    if [ "$validity" ]; then
+	[ "$now" ] || now="$(date +%s)" || exit 3
+	fileModificationEpoch="$(getModificationEpoch "$file")" || exit 3
 
-    [ $((fileModificationEpoch + validity)) -ge "$now" ] || needsUpdate=t
+	[ $((fileModificationEpoch + validity)) -ge "$now" ] || needsUpdate=t
 
-    [ "$isVerbose" ] && [ ! "$needsUpdate" ] && printf '%s does not need an update yet; last update was %d second(s) ago.\n' "$file" "$((now - fileModificationEpoch))"
+	[ "$isVerbose" ] && [ ! "$needsUpdate" ] && printf '%s does not need an update yet; last update was %d second(s) ago.\n' "$file" "$((now - fileModificationEpoch))"
+    else
+	[ "$isVerbose" ] && printf '%s already exists.\n' "$file"
+    fi
 else
     needsUpdate=t
     [ "$isVerbose" ] && printf '%s does not exist yet.\n' "$file"
