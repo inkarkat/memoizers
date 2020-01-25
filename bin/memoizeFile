@@ -5,8 +5,8 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" '[-v|--verbose] -f|--file FILE [-t|--for VALID-TIMESPAN[SUFFIX]] [-r|--redirect] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
-    printf 'Usage: cat FILE | %q %s\n' "$(basename "$1")" '[-v|--verbose] -f|--file FILE [-t|--for VALID-TIMESPAN[SUFFIX]] [-r|--redirect]'
+    printf 'Usage: cat FILE | %q %s\n' "$(basename "$1")" '[-v|--verbose] -f|--file FILE [-t|--for VALID-TIMESPAN[SUFFIX]] [-r|--redirect] [-t|--timestamp EPOCH]'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '[...] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
 }
 printUsage()
 {
@@ -38,6 +38,8 @@ HELPDESCRIPTION
 			(if the command succeeds). Saves you from including the
 			redirection in COMMANDLINE and makes it possible to use
 			SIMPLECOMMAND.
+    --timestamp|-t EPOCH
+			Use EPOCH instead of the current time.
     --command|-c CMD	The command line to be executed to update the FILE (as a
 			side effect, or by redirecting its output into it). When
 			this is a simple command, it can also be passed as such.
@@ -61,6 +63,7 @@ file=
 validity=
 isRedirect=
 isNeedEval=
+now=
 typeset -a commands=()
 while [ $# -ne 0 ]
 do
@@ -79,6 +82,7 @@ do
 			shift
 			;;
 	--redirect|-r)	shift; isRedirect=t;;
+	--timestamp|-t)	shift; now="$1"; shift;;
 	--command|-c)	shift; commands+=(${commands:+;} "$1"); isNeedEval=t; shift;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
@@ -121,7 +125,7 @@ getModificationEpoch()
 needsUpdate=
 fileModificationEpoch=-1
 if [ -e "$file" ]; then
-    now="$(date +%s)" || exit 3
+    [ "$now" ] || now="$(date +%s)" || exit 3
     fileModificationEpoch="$(getModificationEpoch "$file")" || exit 3
 
     [ $((fileModificationEpoch + validity)) -ge "$now" ] || needsUpdate=t
