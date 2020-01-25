@@ -5,8 +5,8 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: cat FILE | %q %s\n' "$(basename "$1")" '[-v|--verbose] -f|--file FILE [-t|--for VALID-TIMESPAN[SUFFIX]] [-r|--redirect] [-t|--timestamp EPOCH]'
-    printf 'Usage: %q %s\n' "$(basename "$1")" '[...] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+    printf 'Usage: cat FILE | %q %s\n' "$(basename "$1")" '[-v|--verbose] -f|--file FILE [-t|--for VALID-TIMESPAN[SUFFIX]] [-t|--timestamp EPOCH]'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '[...] [-r|--redirect] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
 }
 printUsage()
 {
@@ -141,6 +141,7 @@ if [ ${#commands[@]} -eq 0 ]; then
 
     isNeedEval=t
     commands=('cat > "$file"')
+    isRedirect=''   # Not needed when reading from standard input; silently ignore instead of complaining.
 fi
 [ "$needsUpdate" ] || exit 0
 
