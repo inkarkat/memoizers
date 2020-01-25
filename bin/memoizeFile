@@ -131,7 +131,11 @@ if [ -e "$file" ]; then
 
 	[ $((fileModificationEpoch + validity)) -ge "$now" ] || needsUpdate=t
 
-	[ "$isVerbose" ] && [ ! "$needsUpdate" ] && printf '%s does not need an update yet; last update was %d second(s) ago.\n' "$file" "$((now - fileModificationEpoch))"
+	[ "$isVerbose" ] && if [ "$needsUpdate" ]; then
+	    printf '%s needs an update; last update was %d second(s) ago.\n' "$file" "$((now - fileModificationEpoch))"
+	else
+	    printf '%s does not need an update yet; last update was %d second(s) ago.\n' "$file" "$((now - fileModificationEpoch))"
+	fi
     else
 	[ "$isVerbose" ] && printf '%s already exists.\n' "$file"
     fi
