@@ -1,7 +1,6 @@
 #!/bin/bash
 
 export XDG_CONFIG_HOME="$BATS_TMPDIR"
-export NOW=1560159090
 
 setup() {
     clean_config
