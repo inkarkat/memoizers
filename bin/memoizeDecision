@@ -1,4 +1,5 @@
 #!/bin/bash
+shopt -qs extglob
 
 : ${MEMOIZEDECISION_QUERY_PREFIX=[01m}
 : ${MEMOIZEDECISION_QUERY_SUFFIX=[0m}
@@ -12,12 +13,23 @@
 : ${MEMOIZEDECISION_NEGATIVE_SUFFIX=[0m}
 : ${MEMOIZEDECISION_VALID_TIMESPAN_SECONDS:=900}
 
+timeToSeconds()
+{
+    case "$1" in
+	+([0-9])?(s))   time="${1%s}";;
+	+([0-9])m)	time=$((${1%m} * 60));;
+	+([0-9])h)	time=$((${1%h} * 3600));;
+	+([0-9])d)	time=$((${1%d} * 86400));;
+	*)		printf >&2 'ERROR: Illegal ${2:-timeout}: %s\n' "$1"; exit 2;;
+    esac
+    printf %s "$time"
+}
 printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--timespan SECONDS] [--timeout SECONDS] [-d|--default c|y|a|l|A|d|n|o|v|N] [-?|-h|--help]'
-printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -c|--set-decision y|a|l|A|n|o|v|N [-a|--action ACTION] [--timespan SECONDS]'
+printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--timespan TIMESPAN[SUFFIX]] [--timeout TIMEOUT[SUFFIX]] [-d|--default c|y|a|l|A|d|n|o|v|N] [-?|-h|--help]'
+printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -c|--set-decision y|a|l|A|n|o|v|N [-a|--action ACTION] [--timespan TIMESPAN[SUFFIX]]'
 }
 printUsage()
 {
@@ -51,13 +63,15 @@ MEMOIZEDECISION_CHOICE.
 				ACTION.
     --action|-a ACTION		What gets executed if the user answers
 				positively.
-    --timespan SECONDS		Recall a previous answer given for that GROUP
+    --timespan TIMESPAN[SUFFIX]	Recall a previous answer given for that GROUP
 				and SUBJECT if a previous invocation (with an
 				answer of yes/any/no/none) had happened within
-				SECONDS (default ${MEMOIZEDECISION_VALID_TIMESPAN_SECONDS}).
-    --timeout SECONDS		Do not wait indefinitely for the user's answer,
+				TIMESPAN (default ${MEMOIZEDECISION_VALID_TIMESPAN_SECONDS} seconds).
+				SUFFIX may be 's' for seconds (the default), 'm'
+				for minutes, 'h' for hours or 'd' for days.
+    --timeout TIMEOUT[SUFFIX]	Do not wait indefinitely for the user's answer,
 				but abort / use the --default instead after
-				SECONDS have passed without an answer.
+				TIMEOUT have passed without an answer.
     --default|-d confirm-each|c|yes|y|any|a|always|l|any-always|A|decline-each|d|no|n|none|o|never|v|none-never|N
 				Use the provided answer if querying is not
 				possible (no terminal) or when the user fails to
@@ -65,7 +79,7 @@ MEMOIZEDECISION_CHOICE.
     --set-decision|-c yes|y|any|a|always|l|any-always|A|no|n|none|o|never|v|none-never|N
 				Instead of querying, use the passed decision as
 				if the user had chosen it (for --timespan
-				SECONDS for y|a|n|o). If ACTION is passed, a
+				TIMEOUT for y|a|n|o). If ACTION is passed, a
 				corresponding information message is printed;
 				without it, the decision is consumed silently.
 
@@ -95,8 +109,10 @@ do
 	--verb)			shift; verb="$1"; shift;;
 	--state|-t)		shift; state="$1"; shift;;
 	--action|-a)		shift; action="$1"; shift;;
-	--timespan)		shift; MEMOIZEDECISION_VALID_TIMESPAN_SECONDS="$1"; shift;;
-	--timeout)	shift; timeoutPlural=s; [ "$1" = 1 ] && timeoutPlural=; timeout="Within $1 second${timeoutPlural}: "; readArgs+=(-t "$1"); shift;;
+	--timespan)		shift; MEMOIZEDECISION_VALID_TIMESPAN_SECONDS="$(timeToSeconds "$1" timespan)"; shift;;
+	--timeout)	shift; timeInSeconds="$(timeToSeconds "$1" timeout)"; shift
+			timeoutPlural=s; [ "$timeInSeconds" = 1 ] && timeoutPlural=; timeout="Within $timeInSeconds second${timeoutPlural}: "; readArgs+=(-t "$timeInSeconds")
+			;;
 	--default|-d)	shift
 			case "$1" in
 			    confirm-each|c|yes|y|any|a|always|l|any-always|A|decline-each|d|no|n|none|o|never|v|none-never|N)
