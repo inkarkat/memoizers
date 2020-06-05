@@ -130,6 +130,44 @@ hasMarker()
     markerExitStatus="$(marker --query "$subject" --within "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" --get-context)" || return $?
 }
 
+processChoice()
+{
+    case "${1:?}" in
+	h)
+	    timespanDuration=$(reldate --timespan "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" 2>/dev/null || printf '%d seconds' "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS")
+
+	    cat <<EOF
+[c]onfirm each: Accept once; continue asking for this particular $subject, even
+                if it occurs again soon.
+[y]es         : Only this particular $subject, now and for $timespanDuration.
+[a]ny         : Every subject in $group (not just $subject), now and for $timespanDuration.
+a[l]ways      : This particular $subject, now and in eternity.
+[A]ny always  : Every subject in $group, now and in eternity.
+
+[d]ecline each: Not this one, and continue asking for this particular $subject,
+                even if it occurs again soon.
+[n]o          : Not this particular $subject, not now and not for $timespanDuration.
+n[o]ne        : No subject in $group (not just $subject), not now and not for $timespanDuration.
+ne[v]er       : Not this particular $subject, not now and also never in
+		eternity.
+[N]one never  : No subject in $group, not now and also never in eternity.
+
+EOF
+	    ;;
+	c)  exit 0;;
+	y)  writeMarker "$subject" 0 '';;
+	a)  writeMarker '*'	   0 '';;
+	l)  writeMarker "$subject" 0 t;;
+	A)  writeMarker '*'	   0 t;;
+	d)  exit 1;;
+	q)  exit 1;;
+	n)  writeMarker "$subject" 1 '';;
+	o)  writeMarker '*'	   1 '';;
+	v)  writeMarker "$subject" 1 t;;
+	N)  writeMarker '*'	   1 t;;
+    esac
+}
+
 
 while :
 do
@@ -174,38 +212,5 @@ do
 	fi
     fi
 
-    case "$CHOICE" in
-	h)
-	    timespanDuration=$(reldate --timespan "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" 2>/dev/null || printf '%d seconds' "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS")
-
-	    cat <<EOF
-[c]onfirm each: Accept once; continue asking for this particular $subject, even
-                if it occurs again soon.
-[y]es         : Only this particular $subject, now and for $timespanDuration.
-[a]ny         : Every subject in $group (not just $subject), now and for $timespanDuration.
-a[l]ways      : This particular $subject, now and in eternity.
-[A]ny always  : Every subject in $group, now and in eternity.
-
-[d]ecline each: Not this one, and continue asking for this particular $subject,
-                even if it occurs again soon.
-[n]o          : Not this particular $subject, not now and not for $timespanDuration.
-n[o]ne        : No subject in $group (not just $subject), not now and not for $timespanDuration.
-ne[v]er       : Not this particular $subject, not now and also never in
-		eternity.
-[N]one never  : No subject in $group, not now and also never in eternity.
-
-EOF
-	    ;;
-	c)  exit 0;;
-	y)  writeMarker "$subject" 0 '';;
-	a)  writeMarker '*'	   0 '';;
-	l)  writeMarker "$subject" 0 t;;
-	A)  writeMarker '*'	   0 t;;
-	d)  exit 1;;
-	q)  exit 1;;
-	n)  writeMarker "$subject" 1 '';;
-	o)  writeMarker '*'	   1 '';;
-	v)  writeMarker "$subject" 1 t;;
-	N)  writeMarker '*'	   1 t;;
-    esac
+    processChoice "$CHOICE"
 done
