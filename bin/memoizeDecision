@@ -58,11 +58,11 @@ MEMOIZEDECISION_CHOICE.
     --timeout SECONDS		Do not wait indefinitely for the user's answer,
 				but abort / use the --default instead after
 				SECONDS have passed without an answer.
-    --default|-d c|y|a|l|A|d|n|o|v|N
+    --default|-d confirm-each|c|yes|y|any|a|always|l|any-always|A|decline-each|d|no|n|none|o|never|v|none-never|N
 				Use the provided answer if querying is not
 				possible (no terminal) or when the user fails to
 				answer within the provided --timeout.
-    --set-decision|-c y|a|l|A|n|o|v|N
+    --set-decision|-c yes|y|any|a|always|l|any-always|A|no|n|none|o|never|v|none-never|N
 				Instead of querying, use the passed decision as
 				if the user had chosen it (for --timespan
 				SECONDS for y|a|n|o). If ACTION is passed, a
@@ -99,16 +99,18 @@ do
 	--timeout)	shift; timeoutPlural=s; [ "$1" = 1 ] && timeoutPlural=; timeout="Within $1 second${timeoutPlural}: "; readArgs+=(-t "$1"); shift;;
 	--default|-d)	shift
 			case "$1" in
-			    c|y|a|l|A|d|n|o|v|N)  default=$1;;
-			    *)	    printf >&2 'ERROR: Invalid default: %s\n' "$1"; exit 2;;
+			    confirm-each|c|yes|y|any|a|always|l|any-always|A|decline-each|d|no|n|none|o|never|v|none-never|N)
+				default=$1;;
+			    *)	printf >&2 'ERROR: Invalid default: %s\n' "$1"; exit 2;;
 			esac
 			shift
 			;;
 	--set-decision|-c)
 			shift
 			case "$1" in
-			    y|a|l|A|n|o|v|N)  decision=$1;;
-			    *)	    printf >&2 'ERROR: Invalid decision: %s\n' "$1"; exit 2;;
+			    yes|y|any|a|always|l|any-always|A|no|n|none|o|never|v|none-never|N)
+				decision=$1;;
+			    *)	printf >&2 'ERROR: Invalid decision: %s\n' "$1"; exit 2;;
 			esac
 			shift
 			;;
@@ -174,17 +176,17 @@ ne[v]er       : Not this particular $subject, not now and also never in
 
 EOF
 	    ;;
-	c)  return 0;;
-	y)  writeMarker "$subject" 0 '';;
-	a)  writeMarker '*'	   0 '';;
-	l)  writeMarker "$subject" 0 t;;
-	A)  writeMarker '*'	   0 t;;
-	d)  return 1;;
-	q)  return 1;;
-	n)  writeMarker "$subject" 1 '';;
-	o)  writeMarker '*'	   1 '';;
-	v)  writeMarker "$subject" 1 t;;
-	N)  writeMarker '*'	   1 t;;
+	c|confirm-each)	    return 0;;
+	y|yes)		    writeMarker "$subject" 0 '';;
+	a|any)		    writeMarker '*'	   0 '';;
+	l|always)	    writeMarker "$subject" 0 t;;
+	A|any-always)	    writeMarker '*'	   0 t;;
+	d|decline-each)	    return 1;;
+	q)		    return 1;;
+	n|no)		    writeMarker "$subject" 1 '';;
+	o|none)		    writeMarker '*'	   1 '';;
+	v|never)	    writeMarker "$subject" 1 t;;
+	N|none-never)	    writeMarker '*'	   1 t;;
     esac
 }
 
@@ -192,14 +194,14 @@ if [ "$decision" ]; then
     processChoice "$decision"
 
     [ "$action" ] && case "$decision" in
-	y)  printf 'For this particular %s, will %s for the next %s.\n' "$subject" "$action" "$(getTimespanDuration)";;
-	a)  printf 'For every subject in %s, will %s for the next %s.\n' "$group" "$action" "$(getTimespanDuration)";;
-	l)  printf 'For this particular %s, will %s for eternity.\n' "$subject" "$action";;
-	A)  printf 'For every subject in %s, will %s for eternity.\n' "$group" "$action";;
-	n)  printf 'For this particular %s, will not %s for the next %s.\n' "$subject" "$action" "$(getTimespanDuration)";;
-	o)  printf 'For every subject in %s, will not %s for the next %s.\n' "$group" "$action" "$(getTimespanDuration)";;
-	v)  printf 'For this particular %s, will not %s for eternity.\n' "$subject" "$action";;
-	N)  printf 'For every subject in %s, will not %s for eternity.\n' "$group" "$action";;
+	y|yes)		    printf 'For this particular %s, will %s for the next %s.\n' "$subject" "$action" "$(getTimespanDuration)";;
+	a|any)		    printf 'For every subject in %s, will %s for the next %s.\n' "$group" "$action" "$(getTimespanDuration)";;
+	l|always)	    printf 'For this particular %s, will %s for eternity.\n' "$subject" "$action";;
+	A|any-always)	    printf 'For every subject in %s, will %s for eternity.\n' "$group" "$action";;
+	n|no)		    printf 'For this particular %s, will not %s for the next %s.\n' "$subject" "$action" "$(getTimespanDuration)";;
+	o|none)		    printf 'For every subject in %s, will not %s for the next %s.\n' "$group" "$action" "$(getTimespanDuration)";;
+	v|never)	    printf 'For this particular %s, will not %s for eternity.\n' "$subject" "$action";;
+	N|none-never)	    printf 'For every subject in %s, will not %s for eternity.\n' "$group" "$action";;
     esac
 
     exit 0
