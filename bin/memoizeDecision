@@ -130,11 +130,15 @@ hasMarker()
     markerExitStatus="$(marker --query "$subject" --within "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" --get-context)" || return $?
 }
 
+getTimespanDuration()
+{
+    reldate --timespan "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" 2>/dev/null || printf '%d seconds' "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS"
+}
 processChoice()
 {
     case "${1:?}" in
 	h)
-	    timespanDuration=$(reldate --timespan "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" 2>/dev/null || printf '%d seconds' "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS")
+	    timespanDuration="$(getTimespanDuration)"
 
 	    cat <<EOF
 [c]onfirm each: Accept once; continue asking for this particular $subject, even
