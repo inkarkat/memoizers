@@ -17,6 +17,7 @@ printShortUsage()
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
 printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--timespan SECONDS] [--timeout SECONDS] [-d|--default c|y|a|l|A|d|n|o|v|N] [-?|-h|--help]'
+printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -c|--set-decision y|a|l|A|n|o|v|N [-a|--action ACTION] [--timespan SECONDS]'
 }
 printUsage()
 {
@@ -61,6 +62,12 @@ MEMOIZEDECISION_CHOICE.
 				Use the provided answer if querying is not
 				possible (no terminal) or when the user fails to
 				answer within the provided --timeout.
+    --set-decision|-c y|a|l|A|n|o|v|N
+				Instead of querying, use the passed decision as
+				if the user had chosen it (for --timespan
+				SECONDS for y|a|n|o). If ACTION is passed, a
+				corresponding information message is printed;
+				without it, the decision is consumed silently.
 
 EXIT STATUS:
     0 if ACTION should be performed
@@ -76,6 +83,7 @@ verb='does not'
 state=
 action=
 default=
+decision=
 timeout=
 typeset -a readArgs=()
 while [ $# -ne 0 ]
@@ -96,12 +104,20 @@ do
 			esac
 			shift
 			;;
+	--set-decision|-c)
+			shift
+			case "$1" in
+			    y|a|l|A|n|o|v|N)  decision=$1;;
+			    *)	    printf >&2 'ERROR: Invalid decision: %s\n' "$1"; exit 2;;
+			esac
+			shift
+			;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printShortUsage "$0"; } >&2; exit 2;;
 	*)		break;;
     esac
 done
-if [ $# -gt 0 -o ! "$group" -o ! "$subject" -o ! "$state" -o ! "$action" ]; then
+if [ $# -gt 0 -o ! "$group" -o ! "$subject" -o \( -z "$decision" -a \( ! "$state" -o ! "$action" \) \) ]; then
     printUsage "$0"
     exit 2
 fi
@@ -121,7 +137,7 @@ writeMarker()
     [ "$isForever" ] && foreverArgs=(--timestamp 4294967295)
 
     marker --update "$subject" --context "$exitStatus" "${foreverArgs[@]}" || exit 3
-    exit $exitStatus
+    return $exitStatus
 }
 
 hasMarker()
@@ -158,19 +174,36 @@ ne[v]er       : Not this particular $subject, not now and also never in
 
 EOF
 	    ;;
-	c)  exit 0;;
+	c)  return 0;;
 	y)  writeMarker "$subject" 0 '';;
 	a)  writeMarker '*'	   0 '';;
 	l)  writeMarker "$subject" 0 t;;
 	A)  writeMarker '*'	   0 t;;
-	d)  exit 1;;
-	q)  exit 1;;
+	d)  return 1;;
+	q)  return 1;;
 	n)  writeMarker "$subject" 1 '';;
 	o)  writeMarker '*'	   1 '';;
 	v)  writeMarker "$subject" 1 t;;
 	N)  writeMarker '*'	   1 t;;
     esac
 }
+
+if [ "$decision" ]; then
+    processChoice "$decision"
+
+    [ "$action" ] && case "$decision" in
+	y)  printf 'For this particular %s, will %s for the next %s.\n' "$subject" "$action" "$(getTimespanDuration)";;
+	a)  printf 'For every subject in %s, will %s for the next %s.\n' "$group" "$action" "$(getTimespanDuration)";;
+	l)  printf 'For this particular %s, will %s for eternity.\n' "$subject" "$action";;
+	A)  printf 'For every subject in %s, will %s for eternity.\n' "$group" "$action";;
+	n)  printf 'For this particular %s, will not %s for the next %s.\n' "$subject" "$action" "$(getTimespanDuration)";;
+	o)  printf 'For every subject in %s, will not %s for the next %s.\n' "$group" "$action" "$(getTimespanDuration)";;
+	v)  printf 'For this particular %s, will not %s for eternity.\n' "$subject" "$action";;
+	N)  printf 'For every subject in %s, will not %s for eternity.\n' "$group" "$action";;
+    esac
+
+    exit 0
+fi
 
 
 while :
@@ -217,4 +250,7 @@ do
     fi
 
     processChoice "$CHOICE"
+    status=$?
+    [ "$CHOICE" = 'h' ] && continue
+    exit $status
 done
