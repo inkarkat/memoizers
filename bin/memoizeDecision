@@ -10,7 +10,7 @@
 : ${MEMOIZEDECISION_POSITIVE_SUFFIX=[0m}
 : ${MEMOIZEDECISION_NEGATIVE_PREFIX=[33m}
 : ${MEMOIZEDECISION_NEGATIVE_SUFFIX=[0m}
-markerValidTimespanInSeconds=900
+: ${MEMOIZEDECISION_VALID_TIMESPAN_SECONDS:=900}
 
 printShortUsage()
 {
@@ -53,7 +53,7 @@ MEMOIZEDECISION_CHOICE.
     --timespan SECONDS		Recall a previous answer given for that GROUP
 				and SUBJECT if a previous invocation (with an
 				answer of yes/any/no/none) had happened within
-				SECONDS (default ${markerValidTimespanInSeconds}).
+				SECONDS (default ${MEMOIZEDECISION_VALID_TIMESPAN_SECONDS}).
     --timeout SECONDS		Do not wait indefinitely for the user's answer,
 				but abort / use the --default instead after
 				SECONDS have passed without an answer.
@@ -87,7 +87,7 @@ do
 	--verb)			shift; verb="$1"; shift;;
 	--state|-t)		shift; state="$1"; shift;;
 	--action|-a)		shift; action="$1"; shift;;
-	--timespan)		shift; markerValidTimespanInSeconds="$1"; shift;;
+	--timespan)		shift; MEMOIZEDECISION_VALID_TIMESPAN_SECONDS="$1"; shift;;
 	--timeout)	shift; timeoutPlural=s; [ "$1" = 1 ] && timeoutPlural=; timeout="Within $1 second${timeoutPlural}: "; readArgs+=(-t "$1"); shift;;
 	--default|-d)	shift
 			case "$1" in
@@ -127,7 +127,7 @@ writeMarker()
 hasMarker()
 {
     local subject=${1:?}; shift
-    markerExitStatus="$(marker --query "$subject" --within "$markerValidTimespanInSeconds" --get-context)" || return $?
+    markerExitStatus="$(marker --query "$subject" --within "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" --get-context)" || return $?
 }
 
 
@@ -176,7 +176,7 @@ do
 
     case "$CHOICE" in
 	h)
-	    timespanDuration=$(reldate --timespan "$markerValidTimespanInSeconds" 2>/dev/null || printf '%d seconds' "$markerValidTimespanInSeconds")
+	    timespanDuration=$(reldate --timespan "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" 2>/dev/null || printf '%d seconds' "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS")
 
 	    cat <<EOF
 [c]onfirm each: Accept once; continue asking for this particular $subject, even
