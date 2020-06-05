@@ -10,26 +10,64 @@
 : ${MEMOIZEDECISION_POSITIVE_SUFFIX=[0m}
 : ${MEMOIZEDECISION_NEGATIVE_PREFIX=[33m}
 : ${MEMOIZEDECISION_NEGATIVE_SUFFIX=[0m}
+markerValidTimespanInSeconds=900
 
+printShortUsage()
+{
+    # Note: short followed by long option; if the user knows the short one, she can
+    # skim the long one.
+printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--timespan SECONDS] [--timeout SECONDS] [-d|--default c|y|a|l|A|d|n|o|v|N] [-?|-h|--help]'
+}
 printUsage()
 {
-    cat <<HELPTEXT
+    # This is the short help when launched with no or incorrect arguments.
+    # It is printed to stderr to avoid accidental processing.
+    printShortUsage "$1" >&2
+    printf >&2 'Try %q --help for more information.\n' "$(basename "$1")"
+}
+printLongUsage()
+{
+    # This is the long "man page" when launched with the help argument.
+    # It is printed to stdout to allow paging with 'more'.
+    cat <<HELPDESCRIPTION
 Query the user whether ACTION should be performed on SUBJECT to turn it into
-STATE, and remember the decision. If later (depending on the decision "soon"
-(within 15 minutes), or at any time) again called (with the same GROUP,
-depending on the decision for the same SUBJECT, or any), the decision is
-recalled and the user is not queried again.
+STATE, and remember the decision.
+HELPDESCRIPTION
+    echo
+    printShortUsage "$1"
+    cat <<HELPTEXT
+If later (depending on the decision "soon" (within 15 minutes), or at any time)
+again called (with the same GROUP, depending on the decision for the same
+SUBJECT, or any), the decision is recalled and the user is not queried again.
 Question to the user is
     SUBJECT ([VERB] / does not) STATE. Shall I / Will now / Do not ACTION?
 For automation / testing, the query can be pre-answered by defining
 MEMOIZEDECISION_CHOICE.
+    --memoize-group|-g GROUP	Category in the context of the subject.
+    --subject|-s SUBJECT	The subject on which ACTION is performed.
+    --verb VERB			The negation of what the desired STATE is.
+    --state|-t STATE		The desired, positive end state after performing
+				ACTION.
+    --action|-a ACTION		What gets executed if the user answers
+				positively.
+    --timespan SECONDS		Recall a previous answer given for that GROUP
+				and SUBJECT if a previous invocation (with an
+				answer of yes/any/no/none) had happened within
+				SECONDS (default ${markerValidTimespanInSeconds}).
+    --timeout SECONDS		Do not wait indefinitely for the user's answer,
+				but abort / use the --default instead after
+				SECONDS have passed without an answer.
+    --default|-d c|y|a|l|A|d|n|o|v|N
+				Use the provided answer if querying is not
+				possible (no terminal) or when the user fails to
+				answer within the provided --timeout.
+
 EXIT STATUS:
     0 if ACTION should be performed
     1 if not
     2 on invocation error
     3 if memoization fails or the query times out without a given --default
 HELPTEXT
-printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--timespan SECONDS] [--timeout SECONDS] [-d|--default c|y|a|l|A|d|n|o|v|N] [-?|-h|--help]'
 }
 
 group=
@@ -37,14 +75,13 @@ subject=
 verb='does not'
 state=
 action=
-markerValidTimespanInSeconds=900
 default=
 timeout=
 typeset -a readArgs=()
 while [ $# -ne 0 ]
 do
     case "$1" in
-	--help|-h|-\?)	shift; printUsage "$0"; exit 0;;
+	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--memoize-group|-g)	shift; group="$1"; shift;;
 	--subject|-s)		shift; subject="$1"; shift;;
 	--verb)			shift; verb="$1"; shift;;
@@ -60,7 +97,7 @@ do
 			shift
 			;;
 	--)		shift; break;;
-	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
+	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printShortUsage "$0"; } >&2; exit 2;;
 	*)		break;;
     esac
 done
