@@ -210,14 +210,14 @@ if [ "$decision" ]; then
     processChoice "$decision"
 
     [ "$action" ] && case "$decision" in
-	y|yes)		    printf 'For this particular %s, will %s for the next %s.\n' "$subject" "$action" "$(getTimespanDuration)";;
-	a|any)		    printf 'For every subject in %s, will %s for the next %s.\n' "$group" "$action" "$(getTimespanDuration)";;
-	l|always)	    printf 'For this particular %s, will %s for eternity.\n' "$subject" "$action";;
-	A|any-always)	    printf 'For every subject in %s, will %s for eternity.\n' "$group" "$action";;
-	n|no)		    printf 'For this particular %s, will not %s for the next %s.\n' "$subject" "$action" "$(getTimespanDuration)";;
-	o|none)		    printf 'For every subject in %s, will not %s for the next %s.\n' "$group" "$action" "$(getTimespanDuration)";;
-	v|never)	    printf 'For this particular %s, will not %s for eternity.\n' "$subject" "$action";;
-	N|none-never)	    printf 'For every subject in %s, will not %s for eternity.\n' "$group" "$action";;
+	y|yes)		    printf >&2 'For this particular %s, will %s for the next %s.\n' "$subject" "$action" "$(getTimespanDuration)";;
+	a|any)		    printf >&2 'For every subject in %s, will %s for the next %s.\n' "$group" "$action" "$(getTimespanDuration)";;
+	l|always)	    printf >&2 'For this particular %s, will %s for eternity.\n' "$subject" "$action";;
+	A|any-always)	    printf >&2 'For every subject in %s, will %s for eternity.\n' "$group" "$action";;
+	n|no)		    printf >&2 'For this particular %s, will not %s for the next %s.\n' "$subject" "$action" "$(getTimespanDuration)";;
+	o|none)		    printf >&2 'For every subject in %s, will not %s for the next %s.\n' "$group" "$action" "$(getTimespanDuration)";;
+	v|never)	    printf >&2 'For this particular %s, will not %s for eternity.\n' "$subject" "$action";;
+	N|none-never)	    printf >&2 'For every subject in %s, will not %s for eternity.\n' "$group" "$action";;
     esac
 
     exit 0
@@ -228,9 +228,9 @@ while :
 do
     if hasMarker "$subject"; then
 	if [ $markerExitStatus -eq 0 ]; then
-	    printf '%s%s %s %s. Will %s now.%s\n' "$MEMOIZEDECISION_POSITIVE_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_POSITIVE_SUFFIX"
+	    printf >&2 '%s%s %s %s. Will %s now.%s\n' "$MEMOIZEDECISION_POSITIVE_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_POSITIVE_SUFFIX"
 	else
-	    printf '%s%s %s %s. Do not %s.%s\n' "$MEMOIZEDECISION_NEGATIVE_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_NEGATIVE_SUFFIX"
+	    printf >&2 '%s%s %s %s. Do not %s.%s\n' "$MEMOIZEDECISION_NEGATIVE_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_NEGATIVE_SUFFIX"
 	fi
 	exit $markerExitStatus
     else
