@@ -109,8 +109,8 @@ do
 	--verb)			shift; verb="$1"; shift;;
 	--state|-t)		shift; state="$1"; shift;;
 	--action|-a)		shift; action="$1"; shift;;
-	--timespan)		shift; MEMOIZEDECISION_VALID_TIMESPAN_SECONDS="$(timeToSeconds "$1" timespan)"; shift;;
-	--timeout)	shift; timeInSeconds="$(timeToSeconds "$1" timeout)"; shift
+	--timespan)		shift; MEMOIZEDECISION_VALID_TIMESPAN_SECONDS="$(timeToSeconds "$1" timespan)" || exit $?; shift;;
+	--timeout)	shift; timeInSeconds="$(timeToSeconds "$1" timeout)" || exit $?; shift
 			timeoutPlural=s; [ "$timeInSeconds" = 1 ] && timeoutPlural=; timeout="Within $timeInSeconds second${timeoutPlural}: "; readArgs+=(-t "$timeInSeconds")
 			;;
 	--default|-d)	shift
