@@ -5,6 +5,8 @@ shopt -qs extglob
 : ${MEMOIZEDECISION_QUERY_SUFFIX=[0m}
 : ${MEMOIZEDECISION_OPTIONS_PREFIX=[34m}
 : ${MEMOIZEDECISION_OPTIONS_SUFFIX=[0m}
+: ${MEMOIZEDECISION_OPTION_GROUP_PREFIX=[04m}
+: ${MEMOIZEDECISION_OPTION_GROUP_SUFFIX=[0;34m}
 : ${MEMOIZEDECISION_OPTION_ACCELERATOR_PREFIX=[[01;34m}
 : ${MEMOIZEDECISION_OPTION_ACCELERATOR_SUFFIX=[0;34m]}
 : ${MEMOIZEDECISION_POSITIVE_PREFIX=[32m}
@@ -240,8 +242,9 @@ do
 	    printf -v query '%s%s %s %s. Shall I %s?%s' "$MEMOIZEDECISION_QUERY_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_QUERY_SUFFIX"
 	    p=$MEMOIZEDECISION_OPTION_ACCELERATOR_PREFIX
 	    q=$MEMOIZEDECISION_OPTION_ACCELERATOR_SUFFIX
+	    g="${MEMOIZEDECISION_OPTION_GROUP_PREFIX}${group}${MEMOIZEDECISION_OPTION_GROUP_SUFFIX}"
 	    printf -v options "%s(%s${p}c${q}onfirm each / ${p}y${q}es / ${p}a${q}ny %s / a${p}l${q}ways / ${p}A${q}ny %s always / ${p}d${q}ecline each = ${p}q${q}uit / ${p}n${q}o / n${p}o${q}ne from %s / ne${p}v${q}er / ${p}N${q}one from %s never / ${p}h${q}elp)%s" \
-		"$MEMOIZEDECISION_OPTIONS_PREFIX" "$timeout" "$group" "$group" "$group" "$group" "$MEMOIZEDECISION_OPTIONS_SUFFIX"
+		"$MEMOIZEDECISION_OPTIONS_PREFIX" "$timeout" "$g" "$g" "$g" "$g" "$MEMOIZEDECISION_OPTIONS_SUFFIX"
 	    if [ "$MEMOIZEDECISION_CHOICE" ]; then
 		CHOICE="$MEMOIZEDECISION_CHOICE"
 		printf >&2 '%s%s\n' "$query $options " "$CHOICE"
