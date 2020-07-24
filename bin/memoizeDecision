@@ -7,6 +7,8 @@ shopt -qs extglob
 : ${MEMOIZEDECISION_OPTIONS_SUFFIX=[0m}
 : ${MEMOIZEDECISION_OPTION_GROUP_PREFIX=[04m}
 : ${MEMOIZEDECISION_OPTION_GROUP_SUFFIX=[0;34m}
+: ${MEMOIZEDECISION_HELP_GROUP_PREFIX=[04m}
+: ${MEMOIZEDECISION_HELP_GROUP_SUFFIX=[0m}
 : ${MEMOIZEDECISION_OPTION_ACCELERATOR_PREFIX=[[01;34m}
 : ${MEMOIZEDECISION_OPTION_ACCELERATOR_SUFFIX=[0;34m]}
 : ${MEMOIZEDECISION_POSITIVE_PREFIX=[32m}
@@ -176,21 +178,28 @@ processChoice()
 	h)
 	    timespanDuration="$(getTimespanDuration)"
 
+	    os=$MEMOIZEDECISION_OPTIONS_PREFIX
+	    oe=$MEMOIZEDECISION_OPTIONS_SUFFIX
+	    p=$MEMOIZEDECISION_OPTION_ACCELERATOR_PREFIX
+	    q=$MEMOIZEDECISION_OPTION_ACCELERATOR_SUFFIX
+	    g="${MEMOIZEDECISION_HELP_GROUP_PREFIX}${group}${MEMOIZEDECISION_HELP_GROUP_SUFFIX}"
 	    cat <<EOF
-[c]onfirm each: Accept once; continue asking for this particular $subject, even
-                if it occurs again soon.
-[y]es         : Only this particular $subject, now and for $timespanDuration.
-[a]ny         : Every subject in $group (not just $subject), now and for $timespanDuration.
-a[l]ways      : This particular $subject, now and in eternity.
-[A]ny always  : Every subject in $group, now and in eternity.
+${os}${p}c${q}onfirm each${oe}: Accept once; continue asking for this particular $subject, even
+		if it occurs again soon.
+${os}${p}y${q}es${oe}         : Only this particular $subject, now and for $timespanDuration.
+${os}${p}a${q}ny${oe}         : Every subject in $g (not just $subject),
+		now and for $timespanDuration.
+${os}a${p}l${q}ways${oe}      : This particular $subject, now and in eternity.
+${os}${p}A${q}ny always${oe}  : Every subject in $g, now and in eternity.
 
-[d]ecline each: Not this one, and continue asking for this particular $subject,
-                even if it occurs again soon.
-[n]o          : Not this particular $subject, not now and not for $timespanDuration.
-n[o]ne        : No subject in $group (not just $subject), not now and not for $timespanDuration.
-ne[v]er       : Not this particular $subject, not now and also never in
+${os}${p}d${q}ecline each${oe}: Not this one, and continue asking for this particular $subject,
+		even if it occurs again soon.
+${os}${p}n${q}o${oe}          : Not this particular $subject, not now and not for $timespanDuration.
+${os}n${p}o${q}ne${oe}        : No subject in $g (not just $subject),
+		not now and not for $timespanDuration.
+${os}ne${p}v${q}er${oe}       : Not this particular $subject, not now and also never in
 		eternity.
-[N]one never  : No subject in $group, not now and also never in eternity.
+${os}${p}N${q}one never${oe}  : No subject in $g, not now and also never in eternity.
 
 EOF
 	    ;;
