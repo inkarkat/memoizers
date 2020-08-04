@@ -1,6 +1,9 @@
 #!/bin/bash
 shopt -qs extglob
 
+: ${MEMOIZEFILE_FILE_MARKER:='{}'}
+fileMarker="$MEMOIZEFILE_FILE_MARKER"; unset MEMOIZEFILE_FILE_MARKER
+
 printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
@@ -43,7 +46,7 @@ HELPDESCRIPTION
     --command|-c CMD	The command line to be executed to update the FILE (as a
 			side effect, or by redirecting its output into it). When
 			this is a simple command, it can also be passed as such.
-			Inside CMD, {} is replaced with FILE (so that you don't
+			Inside CMD, $fileMarker is replaced with FILE (so that you don't
 			need to specify it twice).
 EXIT STATUS:
     0	FILE exists (and is recent enough), or had to be updated and that
@@ -93,8 +96,9 @@ if [ $# -ne 0 ]; then
     if [ "$isNeedEval" ]; then
 	# Combine --command and SIMPLECOMMAND; need to quote SIMPLECOMMAND to
 	# undo the effects of eval.
-	printf -v quotedSimpleCommand '%q ' "$@}"
-	commands+=(${commands:+;} "${quotedSimpleCommand//\\\{\\\}/\{\}}")	# %q escapes {}, we don't want that to have it interpolated later.
+	printf -v quotedSimpleCommand '%q ' "$@"
+	printf -v escapedFileMarker %q "$fileMarker"
+	commands+=(${commands:+;} "${quotedSimpleCommand//"$escapedFileMarker"/$fileMarker}")	# %q escapes {}, we don't want that to have it interpolated later.
     else
 	commands=("$@")
     fi
@@ -109,7 +113,7 @@ fi
 
 update()
 {
-    typeset -a interpolatedCommands=("${commands[@]//\{\}/$file}")
+    typeset -a interpolatedCommands=("${commands[@]//"$fileMarker"/$file}")
     if [ "$isNeedEval" ]; then
 	eval "${interpolatedCommands[@]}"
     else
