@@ -3,14 +3,22 @@ shopt -qs extglob
 
 : ${MEMOIZEDECISION_QUERY_PREFIX=[01m}
 : ${MEMOIZEDECISION_QUERY_SUFFIX=[0m}
-: ${MEMOIZEDECISION_OPTIONS_PREFIX=[34m}
-: ${MEMOIZEDECISION_OPTIONS_SUFFIX=[0m}
-: ${MEMOIZEDECISION_OPTION_GROUP_PREFIX=[04m}
-: ${MEMOIZEDECISION_OPTION_GROUP_SUFFIX=[0;34m}
+: ${MEMOIZEDECISION_POSITIVE_OPTION_PREFIX=[34m}
+: ${MEMOIZEDECISION_POSITIVE_OPTION_SUFFIX=[0m}
+: ${MEMOIZEDECISION_NEGATIVE_OPTION_PREFIX=[31m}
+: ${MEMOIZEDECISION_NEGATIVE_OPTION_SUFFIX=[0m}
+: ${MEMOIZEDECISION_POSITIVE_OPTION_GROUP_PREFIX=[04m}
+: ${MEMOIZEDECISION_POSITIVE_OPTION_GROUP_SUFFIX=[0;34m}
+: ${MEMOIZEDECISION_NEGATIVE_OPTION_GROUP_PREFIX=[04m}
+: ${MEMOIZEDECISION_NEGATIVE_OPTION_GROUP_SUFFIX=[0;31m}
 : ${MEMOIZEDECISION_HELP_GROUP_PREFIX=[04m}
 : ${MEMOIZEDECISION_HELP_GROUP_SUFFIX=[0m}
-: ${MEMOIZEDECISION_OPTION_ACCELERATOR_PREFIX=[[01;34m}
-: ${MEMOIZEDECISION_OPTION_ACCELERATOR_SUFFIX=[0;34m]}
+: ${MEMOIZEDECISION_OPTION_ACCELERATOR_PREFIX=[[01m}
+: ${MEMOIZEDECISION_OPTION_ACCELERATOR_SUFFIX=[0m]}
+: ${MEMOIZEDECISION_POSITIVE_OPTION_ACCELERATOR_PREFIX=[[01;34m}
+: ${MEMOIZEDECISION_POSITIVE_OPTION_ACCELERATOR_SUFFIX=[0;34m]}
+: ${MEMOIZEDECISION_NEGATIVE_OPTION_ACCELERATOR_PREFIX=[[01;31m}
+: ${MEMOIZEDECISION_NEGATIVE_OPTION_ACCELERATOR_SUFFIX=[0;31m]}
 : ${MEMOIZEDECISION_POSITIVE_PREFIX=[32m}
 : ${MEMOIZEDECISION_POSITIVE_SUFFIX=[0m}
 : ${MEMOIZEDECISION_NEGATIVE_PREFIX=[33m}
@@ -178,28 +186,35 @@ processChoice()
 	h)
 	    timespanDuration="$(getTimespanDuration)"
 
-	    os=$MEMOIZEDECISION_OPTIONS_PREFIX
-	    oe=$MEMOIZEDECISION_OPTIONS_SUFFIX
+	    pos=$MEMOIZEDECISION_POSITIVE_OPTION_PREFIX
+	    poe=$MEMOIZEDECISION_POSITIVE_OPTION_SUFFIX
+	    nos=$MEMOIZEDECISION_NEGATIVE_OPTION_PREFIX
+	    noe=$MEMOIZEDECISION_NEGATIVE_OPTION_SUFFIX
 	    p=$MEMOIZEDECISION_OPTION_ACCELERATOR_PREFIX
 	    q=$MEMOIZEDECISION_OPTION_ACCELERATOR_SUFFIX
-	    g="${MEMOIZEDECISION_HELP_GROUP_PREFIX}${group}${MEMOIZEDECISION_HELP_GROUP_SUFFIX}"
+	    pp=$MEMOIZEDECISION_POSITIVE_OPTION_ACCELERATOR_PREFIX
+	    pq=$MEMOIZEDECISION_POSITIVE_OPTION_ACCELERATOR_SUFFIX
+	    np=$MEMOIZEDECISION_NEGATIVE_OPTION_ACCELERATOR_PREFIX
+	    nq=$MEMOIZEDECISION_NEGATIVE_OPTION_ACCELERATOR_SUFFIX
+	    gp="${MEMOIZEDECISION_POSITIVE_OPTION_GROUP_PREFIX}${group}${MEMOIZEDECISION_POSITIVE_OPTION_GROUP_SUFFIX}"
+	    gn="${MEMOIZEDECISION_NEGATIVE_OPTION_GROUP_PREFIX}${group}${MEMOIZEDECISION_NEGATIVE_OPTION_GROUP_SUFFIX}"
 	    cat <<EOF
-${os}${p}c${q}onfirm each${oe}: Accept once; continue asking for this particular $subject, even
+${pos}${pp}c${pq}onfirm each${poe}: Accept once; continue asking for this particular $subject, even
 		if it occurs again soon.
-${os}${p}y${q}es${oe}         : Only this particular $subject, now and for $timespanDuration.
-${os}${p}a${q}ny${oe}         : Every subject in $g (not just $subject),
+${pos}${pp}y${pq}es${poe}         : Only this particular $subject, now and for $timespanDuration.
+${pos}${pp}a${pq}ny${poe}         : Every subject in $pg (not just $subject),
 		now and for $timespanDuration.
-${os}a${p}l${q}ways${oe}      : This particular $subject, now and in eternity.
-${os}${p}A${q}ny always${oe}  : Every subject in $g, now and in eternity.
+${pos}a${pp}l${pq}ways${poe}      : This particular $subject, now and in eternity.
+${pos}${pp}A${pq}ny always${poe}  : Every subject in $pg, now and in eternity.
 
-${os}${p}d${q}ecline each${oe}: Not this one, and continue asking for this particular $subject,
+${nos}${np}d${nq}ecline each${noe}: Not this one, and continue asking for this particular $subject,
 		even if it occurs again soon.
-${os}${p}n${q}o${oe}          : Not this particular $subject, not now and not for $timespanDuration.
-${os}n${p}o${q}ne${oe}        : No subject in $g (not just $subject),
+${nos}${np}n${nq}o${noe}          : Not this particular $subject, not now and not for $timespanDuration.
+${nos}n${np}o${nq}ne${noe}        : No subject in $ng (not just $subject),
 		not now and not for $timespanDuration.
-${os}ne${p}v${q}er${oe}       : Not this particular $subject, not now and also never in
+${nos}ne${np}v${nq}er${noe}       : Not this particular $subject, not now and also never in
 		eternity.
-${os}${p}N${q}one never${oe}  : No subject in $g, not now and also never in eternity.
+${nos}${np}N${nq}one never${noe}  : No subject in $ng, not now and also never in eternity.
 
 EOF
 	    ;;
@@ -251,9 +266,14 @@ do
 	    printf -v query '%s%s %s %s. Shall I %s?%s' "$MEMOIZEDECISION_QUERY_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_QUERY_SUFFIX"
 	    p=$MEMOIZEDECISION_OPTION_ACCELERATOR_PREFIX
 	    q=$MEMOIZEDECISION_OPTION_ACCELERATOR_SUFFIX
-	    g="${MEMOIZEDECISION_OPTION_GROUP_PREFIX}${group}${MEMOIZEDECISION_OPTION_GROUP_SUFFIX}"
-	    printf -v options "%s(%s${p}c${q}onfirm each / ${p}y${q}es / ${p}a${q}ny %s / a${p}l${q}ways / ${p}A${q}ny %s always / ${p}d${q}ecline each = ${p}q${q}uit / ${p}n${q}o / n${p}o${q}ne from %s / ne${p}v${q}er / ${p}N${q}one from %s never / ${p}h${q}elp)%s" \
-		"$MEMOIZEDECISION_OPTIONS_PREFIX" "$timeout" "$g" "$g" "$g" "$g" "$MEMOIZEDECISION_OPTIONS_SUFFIX"
+	    pp=$MEMOIZEDECISION_POSITIVE_OPTION_ACCELERATOR_PREFIX
+	    pq=$MEMOIZEDECISION_POSITIVE_OPTION_ACCELERATOR_SUFFIX
+	    np=$MEMOIZEDECISION_NEGATIVE_OPTION_ACCELERATOR_PREFIX
+	    nq=$MEMOIZEDECISION_NEGATIVE_OPTION_ACCELERATOR_SUFFIX
+	    gp="${MEMOIZEDECISION_POSITIVE_OPTION_GROUP_PREFIX}${group}${MEMOIZEDECISION_POSITIVE_OPTION_GROUP_SUFFIX}"
+	    gn="${MEMOIZEDECISION_NEGATIVE_OPTION_GROUP_PREFIX}${group}${MEMOIZEDECISION_NEGATIVE_OPTION_GROUP_SUFFIX}"
+	    printf -v options "(%s%s${pp}c${pq}onfirm each / ${pp}y${pq}es / ${pp}a${pq}ny %s / a${pp}l${pq}ways / ${pp}A${pq}ny %s always%s / %s${np}d${nq}ecline each = ${np}q${nq}uit / ${np}n${nq}o / n${np}o${nq}ne from %s / ne${np}v${nq}er / ${np}N${nq}one from %s never%s / ${p}h${q}elp)" \
+		"$MEMOIZEDECISION_POSITIVE_OPTION_PREFIX" "$timeout" "$gp" "$gp" "$MEMOIZEDECISION_POSITIVE_OPTION_SUFFIX" "$MEMOIZEDECISION_NEGATIVE_OPTION_PREFIX" "$gn" "$gn" "$MEMOIZEDECISION_NEGATIVE_OPTION_SUFFIX"
 	    if [ "$MEMOIZEDECISION_CHOICE" ]; then
 		CHOICE="$MEMOIZEDECISION_CHOICE"
 		printf >&2 '%s%s\n' "$query $options " "$CHOICE"
