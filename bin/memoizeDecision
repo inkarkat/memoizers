@@ -102,13 +102,15 @@ EXIT STATUS:
     3 if memoization fails or the query times out without a given --default
 HELPTEXT
 }
+
+VALID_CHOICE_GLOB='confirm-each|c|yes|y|any|a|always|l|any-always|A|decline-each|d|no|n|none|o|never|v|none-never|N'
 assertValidChoice()
 {
-    case "$1" in
-	confirm-each|c|yes|y|any|a|always|l|any-always|A|decline-each|d|no|n|none|o|never|v|none-never|N)
+    eval "case \"\$1\" in
+	$VALID_CHOICE_GLOB)
 	    return 0;;
 	*)  return 1;;
-    esac
+    esac"
 }
 
 group=
