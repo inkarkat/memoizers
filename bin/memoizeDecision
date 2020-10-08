@@ -145,7 +145,7 @@ do
 			shift
 			case "$1" in
 			    yes|y|any|a|always|l|any-always|A|no|n|none|o|never|v|none-never|N)
-				decision=$1;;
+				decision="$1";;
 			    *)	printf >&2 'ERROR: Invalid decision: %s\n' "$1"; exit 2;;
 			esac
 			shift
@@ -283,11 +283,11 @@ do
 	    printf -v options "(%s%s${pp}c${pq}onfirm each / ${pp}y${pq}es / ${pp}a${pq}ny %s / a${pp}l${pq}ways / ${pp}A${pq}ny %s always%s / %s${np}d${nq}ecline each = ${np}q${nq}uit / ${np}n${nq}o / n${np}o${nq}ne from %s / ne${np}v${nq}er / ${np}N${nq}one from %s never%s / ${p}h${q}elp)" \
 		"$MEMOIZEDECISION_POSITIVE_OPTION_PREFIX" "$timeout" "$gp" "$gp" "$MEMOIZEDECISION_POSITIVE_OPTION_SUFFIX" "$MEMOIZEDECISION_NEGATIVE_OPTION_PREFIX" "$gn" "$gn" "$MEMOIZEDECISION_NEGATIVE_OPTION_SUFFIX"
 	    if [ "$MEMOIZEDECISION_CHOICE" ]; then
-		CHOICE="$MEMOIZEDECISION_CHOICE"
-		printf >&2 '%s%s\n' "$query $options " "$CHOICE"
+		choice="$MEMOIZEDECISION_CHOICE"
+		printf >&2 '%s%s\n' "$query $options " "$choice"
 		status=0
 	    else
-		CHOICE="$(userquery "${readArgs[@]}" -n 1 -p "$query $options ")"
+		choice="$(userquery "${readArgs[@]}" -n 1 -p "$query $options ")"
 		status=$?
 		echo >&2
 	    fi
@@ -298,7 +298,7 @@ do
 
 	if [ $status -gt 128 ]; then
 	    if [ "$default" ]; then
-		CHOICE=$default
+		choice="$default"
 	    else
 		exit 3
 	    fi
@@ -307,8 +307,8 @@ do
 	fi
     fi
 
-    processChoice "$CHOICE"
+    processChoice "$choice"
     status=$?
-    [ "$CHOICE" = 'h' ] && continue
+    [ "$choice" = 'h' ] && continue
     exit $status
 done
