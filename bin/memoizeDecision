@@ -294,10 +294,9 @@ do
 		printf >&2 '%s%s\n' "$query $options " "$choice"
 		status=0
 	    else
-		choice="$(userquery "${readArgs[@]}" -n 1 -p "$query $options ")"
+		choice="$(userchoice --valid "$VALID_CHOICE_GLOB" --keep-prompt "${readArgs[@]}" -n 1 -p "$query $options ")"
 		status=$?
 		assertValidChoice "$choice" || exit 3
-		echo >&2
 	    fi
 	else
 	    # When we cannot read from the terminal ("/dev/tty: No such device or address"), use default or abort.
