@@ -283,12 +283,18 @@ do
 	    printf -v options "(%s%s${pp}c${pq}onfirm each / ${pp}y${pq}es / ${pp}a${pq}ny %s / a${pp}l${pq}ways / ${pp}A${pq}ny %s always%s / %s${np}d${nq}ecline each = ${np}q${nq}uit / ${np}n${nq}o / n${np}o${nq}ne from %s / ne${np}v${nq}er / ${np}N${nq}one from %s never%s / ${p}h${q}elp)" \
 		"$MEMOIZEDECISION_POSITIVE_OPTION_PREFIX" "$timeout" "$gp" "$gp" "$MEMOIZEDECISION_POSITIVE_OPTION_SUFFIX" "$MEMOIZEDECISION_NEGATIVE_OPTION_PREFIX" "$gn" "$gn" "$MEMOIZEDECISION_NEGATIVE_OPTION_SUFFIX"
 	    if [ "$MEMOIZEDECISION_CHOICE" ]; then
+		if ! assertValidChoice "$MEMOIZEDECISION_CHOICE"; then
+		    printf >&2 'ERROR: Invalid MEMOIZEDECISION_CHOICE: %s\n' "$MEMOIZEDECISION_CHOICE"
+		    exit 2
+		fi
+
 		choice="$MEMOIZEDECISION_CHOICE"
 		printf >&2 '%s%s\n' "$query $options " "$choice"
 		status=0
 	    else
 		choice="$(userquery "${readArgs[@]}" -n 1 -p "$query $options ")"
 		status=$?
+		assertValidChoice "$choice" || exit 3
 		echo >&2
 	    fi
 	else
