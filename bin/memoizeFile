@@ -48,7 +48,7 @@ HELPDESCRIPTION
     --command|-c CMD	The command line to be executed to update the FILE (as a
 			side effect, or by redirecting its output into it). When
 			this is a simple command, it can also be passed as such.
-			${fileMarker:+Inside CMD, $fileMarker is replaced with FILE (so that you don't
+			${fileMarker:+Inside CMD, $fileMarker is replaced with FILE (so that you do not
 			need to specify it twice).}
 EXIT STATUS:
     0	FILE exists (and is recent enough), or had to be updated and that
@@ -60,7 +60,7 @@ EXIT STATUS:
 
 Example:
 HELPTEXT
-    printf '%q %s\n' "$(basename "$1")" '--foo bar /tmp/foobar'
+    printf '%q %s\n' "$(basename "$1")" '--file ~/.cache/blogfeed --for 1d -- wget https://ingo-karkat.de/blog/feed -o ~/.cache/blogfeed'
 }
 
 isVerbose=
@@ -73,7 +73,7 @@ typeset -a commands=()
 while [ $# -ne 0 ]
 do
     case "$1" in
-	--help|-h|-\?)	shift; printUsage "$0"; exit 0;;
+	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--verbose|-v)	shift; isVerbose=t;;
 	--file|-f)	shift; file="$1"; shift;;
 	--for|-t)	shift
