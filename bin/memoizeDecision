@@ -165,7 +165,7 @@ fi
 
 marker()
 {
-    executionMarker --namespace memoizeDecision --group "$group" --fallback-subject '*' "$@"
+    executionMarker --base-type config --namespace memoizeDecision --group "$group" --fallback-subject '*' "$@"
 }
 
 writeMarker()
