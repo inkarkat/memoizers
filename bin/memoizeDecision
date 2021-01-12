@@ -108,7 +108,7 @@ VALID_CHOICE_GLOB='confirm-each|c|yes|y|any|a|always|l|any-always|A|decline-each
 assertValidChoice()
 {
     eval "case \"\$1\" in
-	$VALID_CHOICE_GLOB)
+	${VALID_CHOICE_GLOB}${2:+|}${2})
 	    return 0;;
 	*)  return 1;;
     esac"
@@ -296,9 +296,9 @@ do
 		printf >&2 '%s%s\n' "$query $options " "$choice"
 		status=0
 	    else
-		choice="$(userchoice --valid "$VALID_CHOICE_GLOB" --keep-prompt "${readArgs[@]}" -n 1 -p "$query $options ")"
+		choice="$(userchoice --valid "${VALID_CHOICE_GLOB}|h" --keep-prompt "${readArgs[@]}" -n 1 -p "$query $options ")"
 		status=$?
-		assertValidChoice "$choice" || exit 3
+		assertValidChoice "$choice" 'h' || exit 3
 	    fi
 	else
 	    # When we cannot read from the terminal ("/dev/tty: No such device or address"), use default or abort.
