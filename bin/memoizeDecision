@@ -215,13 +215,14 @@ getMarkerExitStatusAndTimestamp()
 }
 getMarkerSubjectAndExpiryAndExitStatusAndTimestamp()
 {
+    local validTimespanSeconds=$((MEMOIZEDECISION_VALID_TIMESPAN_SECONDS - 1 >= 0 ? MEMOIZEDECISION_VALID_TIMESPAN_SECONDS - 1 : 0))
     markerSubject="${1:?}"
     markerIsExpired=
 
-    getMarkerExitStatusAndTimestamp --within "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" && return 0
+    getMarkerExitStatusAndTimestamp --within "$validTimespanSeconds" && return 0
 
     markerSubject='*'
-    getMarkerExitStatusAndTimestamp --within "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" && return 0
+    getMarkerExitStatusAndTimestamp --within "$validTimespanSeconds" && return 0
 
     markerIsExpired=t
     markerSubject="$1"
