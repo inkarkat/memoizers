@@ -167,7 +167,7 @@ fi
 
 marker()
 {
-    executionMarker --base-type config --namespace memoizeDecision --group "$group" --fallback-subject '*' "$@"
+    executionMarker --base-type config --namespace memoizeDecision --group "$group" "$@"
 }
 
 writeMarker()
@@ -179,14 +179,14 @@ writeMarker()
     local isForever=$1; shift
     [ "$isForever" ] && foreverArgs=(--timestamp "$FOREVER_EPOCH")
 
-    marker --update "$subject" --context "$exitStatus" "${foreverArgs[@]}" || exit 3
+    marker --fallback-subject '*' --update "$subject" --context "$exitStatus" "${foreverArgs[@]}" || exit 3
     return $exitStatus
 }
 
 hasMarker()
 {
     local subject=${1:?}; shift
-    markerExitStatus="$(marker --query "$subject" --within "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" --get-context)" || return $?
+    markerExitStatus="$(marker --fallback-subject '*' --query "$subject" --within "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" --get-context)" || return $?
 }
 
 getTimespanDuration()
