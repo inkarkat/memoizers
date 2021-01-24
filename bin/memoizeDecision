@@ -45,6 +45,8 @@ printShortUsage()
     printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--timespan TIMESPAN[SUFFIX]] [--timeout TIMEOUT[SUFFIX]] [-d|--default c|y|a|l|A|d|n|o|v|N] [-?|-h|--help]'
     echo
     printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -c|--set-decision y|a|l|A|n|o|v|N [-a|--action ACTION] [--timespan TIMESPAN[SUFFIX]]'
+    echo
+    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -q|--get-decision'
 }
 printUsage()
 {
@@ -63,6 +65,7 @@ STATE, and remember the decision.
 HELPDESCRIPTION
     echo
     printShortUsage "$1"
+    echo
     cat <<HELPTEXT
 If later (depending on the decision "soon" (within 15 minutes), or at any time)
 again called (with the same GROUP, depending on the decision for the same
@@ -97,6 +100,10 @@ MEMOIZEDECISION_CHOICE.
 				TIMEOUT for y|a|n|o). If ACTION is passed, a
 				corresponding information message is printed;
 				without it, the decision is consumed silently.
+    --get-decision|-q		Print a previously queried / passed decision;
+				i.e. one of:
+				yes|any|always|any-always|no|none|never|none-never
+				or exit with 1 if no decision for SUBJECT exists.
 
 EXIT STATUS:
     0 if ACTION should be performed
@@ -125,6 +132,7 @@ default=
 decision=
 timeout=
 typeset -a readArgs=()
+isGetDecision=
 while [ $# -ne 0 ]
 do
     case "$1" in
@@ -155,12 +163,14 @@ do
 			esac
 			shift
 			;;
+	--get-decision|-q)
+			shift; isGetDecision=t;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
     esac
 done
-if [ $# -gt 0 -o ! "$group" -o ! "$subject" -o \( -z "$decision" -a \( ! "$state" -o ! "$action" \) \) ]; then
+if [ $# -gt 0 -o ! "$group" -o ! "$subject" -o \( ! "$isGetDecision" -a -z "$decision" -a \( ! "$state" -o ! "$action" \) \) ]; then
     printUsage "$0"
     exit 2
 fi
@@ -187,6 +197,25 @@ hasMarker()
 {
     local subject=${1:?}; shift
     markerExitStatus="$(marker --fallback-subject '*' --query "$subject" --within "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" --get-context)" || return $?
+}
+
+getMarkerExitStatusAndTimestamp()
+{
+    {
+	IFS=$'\n' read -r markerExitStatus
+	IFS=$'\n' read -r markerTimestamp
+    } < <(marker --query "$markerSubject" --get-context --get-timestamp)
+}
+getMarkerSubjectAndExitStatusAndTimestamp()
+{
+    markerSubject=${1:?}; shift
+
+    getMarkerExitStatusAndTimestamp
+    [ -n "$markerExitStatus" -a -n "$markerTimestamp" ] && return 0
+
+    markerSubject='*'
+    getMarkerExitStatusAndTimestamp
+    [ -n "$markerExitStatus" -a -n "$markerTimestamp" ]
 }
 
 getTimespanDuration()
@@ -259,6 +288,26 @@ if [ "$decision" ]; then
 	N|none-never)	    printf >&2 'For every subject in %s, will not %s for eternity.\n' "$group" "$action";;
     esac
 
+    exit 0
+elif [ "$isGetDecision" ]; then
+    getMarkerSubjectAndExitStatusAndTimestamp "$subject" || exit 1
+
+    isFallback=; [ "$markerSubject" = '*' ] && isFallback=t
+    isYes=; [ $markerExitStatus -eq 0 ] && isYes=t
+    isForever=; [ $markerTimestamp -eq $FOREVER_EPOCH ] && isForever=t
+
+    if   [ ! "$isFallback" ] && [   "$isYes" ] && [ ! "$isForever" ]; then result='yes'
+    elif [   "$isFallback" ] && [   "$isYes" ] && [ ! "$isForever" ]; then result='any'
+    elif [ ! "$isFallback" ] && [   "$isYes" ] && [   "$isForever" ]; then result='always'
+    elif [   "$isFallback" ] && [   "$isYes" ] && [   "$isForever" ]; then result='any-always'
+    elif [ ! "$isFallback" ] && [ ! "$isYes" ] && [ ! "$isForever" ]; then result='no'
+    elif [   "$isFallback" ] && [ ! "$isYes" ] && [ ! "$isForever" ]; then result='none'
+    elif [ ! "$isFallback" ] && [ ! "$isYes" ] && [   "$isForever" ]; then result='never'
+    elif [   "$isFallback" ] && [ ! "$isYes" ] && [   "$isForever" ]; then result='none-never'
+    else echo >&2 'ASSERT: Unhandled combination.'; exit 3
+    fi
+
+    printf '%s\n' "$result"
     exit 0
 fi
 
