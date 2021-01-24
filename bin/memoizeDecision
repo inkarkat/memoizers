@@ -102,7 +102,8 @@ MEMOIZEDECISION_CHOICE.
 				without it, the decision is consumed silently.
     --get-decision|-q		Print a previously queried / passed decision;
 				i.e. one of:
-				yes|any|always|any-always|no|none|never|none-never
+				[expired] yes|[expired] any|always|any-always|
+				[expired] no|[expired] none|never|none-never
 				or exit with 1 if no decision for SUBJECT exists.
 
 EXIT STATUS:
@@ -201,21 +202,33 @@ hasMarker()
 
 getMarkerExitStatusAndTimestamp()
 {
+    markerExitStatus=
+    markerTimestamp=
+    local exitStatusAndTimestamp; exitStatusAndTimestamp="$(marker --query "$markerSubject" "$@" --get-context --get-timestamp)" || return $?
+
     {
 	IFS=$'\n' read -r markerExitStatus
 	IFS=$'\n' read -r markerTimestamp
-    } < <(marker --query "$markerSubject" --get-context --get-timestamp)
-}
-getMarkerSubjectAndExitStatusAndTimestamp()
-{
-    markerSubject=${1:?}; shift
+    } < <(printf '%s\n' "$exitStatusAndTimestamp")
 
-    getMarkerExitStatusAndTimestamp
-    [ -n "$markerExitStatus" -a -n "$markerTimestamp" ] && return 0
+    [ -n "$markerExitStatus" -a -n "$markerTimestamp" ]
+}
+getMarkerSubjectAndExpiryAndExitStatusAndTimestamp()
+{
+    markerSubject="${1:?}"
+    markerIsExpired=
+
+    getMarkerExitStatusAndTimestamp --within "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" && return 0
 
     markerSubject='*'
-    getMarkerExitStatusAndTimestamp
-    [ -n "$markerExitStatus" -a -n "$markerTimestamp" ]
+    getMarkerExitStatusAndTimestamp --within "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" && return 0
+
+    markerIsExpired=t
+    markerSubject="$1"
+    getMarkerExitStatusAndTimestamp && return 0
+
+    markerSubject='*'
+    getMarkerExitStatusAndTimestamp && return 0
 }
 
 getTimespanDuration()
@@ -290,20 +303,21 @@ if [ "$decision" ]; then
 
     exit 0
 elif [ "$isGetDecision" ]; then
-    getMarkerSubjectAndExitStatusAndTimestamp "$subject" || exit 1
+    getMarkerSubjectAndExpiryAndExitStatusAndTimestamp "$subject" || exit 1
 
     isFallback=; [ "$markerSubject" = '*' ] && isFallback=t
     isYes=; [ $markerExitStatus -eq 0 ] && isYes=t
     isForever=; [ $markerTimestamp -eq $FOREVER_EPOCH ] && isForever=t
+    expired="${markerIsExpired:+expired }"
 
-    if   [ ! "$isFallback" ] && [   "$isYes" ] && [ ! "$isForever" ]; then result='yes'
-    elif [   "$isFallback" ] && [   "$isYes" ] && [ ! "$isForever" ]; then result='any'
-    elif [ ! "$isFallback" ] && [   "$isYes" ] && [   "$isForever" ]; then result='always'
-    elif [   "$isFallback" ] && [   "$isYes" ] && [   "$isForever" ]; then result='any-always'
-    elif [ ! "$isFallback" ] && [ ! "$isYes" ] && [ ! "$isForever" ]; then result='no'
-    elif [   "$isFallback" ] && [ ! "$isYes" ] && [ ! "$isForever" ]; then result='none'
-    elif [ ! "$isFallback" ] && [ ! "$isYes" ] && [   "$isForever" ]; then result='never'
-    elif [   "$isFallback" ] && [ ! "$isYes" ] && [   "$isForever" ]; then result='none-never'
+    if   [ ! "$isFallback" ] && [   "$isYes" ] && [ ! "$isForever" ]; then result="${expired}yes"
+    elif [   "$isFallback" ] && [   "$isYes" ] && [ ! "$isForever" ]; then result="${expired}any"
+    elif [ ! "$isFallback" ] && [   "$isYes" ] && [   "$isForever" ]; then result="always"
+    elif [   "$isFallback" ] && [   "$isYes" ] && [   "$isForever" ]; then result="any-always"
+    elif [ ! "$isFallback" ] && [ ! "$isYes" ] && [ ! "$isForever" ]; then result="${expired}no"
+    elif [   "$isFallback" ] && [ ! "$isYes" ] && [ ! "$isForever" ]; then result="${expired}none"
+    elif [ ! "$isFallback" ] && [ ! "$isYes" ] && [   "$isForever" ]; then result="never"
+    elif [   "$isFallback" ] && [ ! "$isYes" ] && [   "$isForever" ]; then result="none-never"
     else echo >&2 'ASSERT: Unhandled combination.'; exit 3
     fi
 
