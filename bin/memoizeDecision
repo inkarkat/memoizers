@@ -25,6 +25,8 @@ shopt -qs extglob
 : ${MEMOIZEDECISION_NEGATIVE_SUFFIX=[0m}
 : ${MEMOIZEDECISION_VALID_TIMESPAN_SECONDS:=900}
 
+readonly FOREVER_EPOCH=4294967295
+
 timeToSeconds()
 {
     case "$1" in
@@ -175,7 +177,7 @@ writeMarker()
 
     typeset -a foreverArgs=()
     local isForever=$1; shift
-    [ "$isForever" ] && foreverArgs=(--timestamp 4294967295)
+    [ "$isForever" ] && foreverArgs=(--timestamp "$FOREVER_EPOCH")
 
     marker --update "$subject" --context "$exitStatus" "${foreverArgs[@]}" || exit 3
     return $exitStatus
