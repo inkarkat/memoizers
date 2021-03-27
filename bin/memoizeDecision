@@ -42,9 +42,9 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--timespan TIMESPAN[SUFFIX]] [--timeout TIMEOUT[SUFFIX]] [-d|--default c|y|a|l|A|d|n|o|v|N] [-?|-h|--help]'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--timespan TIMESPAN[SUFFIX]] [--timeout TIMEOUT[SUFFIX]] [-d|--default c|y|a|l|A|d|n|o|v|N] [-p|--print-decision] [-?|-h|--help]'
     echo
-    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -c|--set-decision y|a|l|A|n|o|v|N [-a|--action ACTION] [--timespan TIMESPAN[SUFFIX]]'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -c|--set-decision y|a|l|A|n|o|v|N [-a|--action ACTION] [--timespan TIMESPAN[SUFFIX]] [-p|--print-decision]'
     echo
     printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -q|--get-decision'
 }
@@ -105,6 +105,10 @@ MEMOIZEDECISION_CHOICE.
 				[expired] yes|[expired] any|always|any-always|
 				[expired] no|[expired] none|never|none-never
 				or exit with 1 if no decision for SUBJECT exists.
+    --print-decision|-p		Also print the queryied (/ passed) decision to
+				stdout in a format that can then be passed to
+				--set-decision. Useful to automatically apply a
+				decision to other subjects as well.
 
 EXIT STATUS:
     0 if ACTION should be performed
@@ -134,6 +138,7 @@ decision=
 timeout=
 typeset -a readArgs=()
 isGetDecision=
+isPrintDecision=
 while [ $# -ne 0 ]
 do
     case "$1" in
@@ -166,6 +171,8 @@ do
 			;;
 	--get-decision|-q)
 			shift; isGetDecision=t;;
+	--print-decision|-p)
+			shift; isPrintDecision=t;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
@@ -238,7 +245,11 @@ getTimespanDuration()
 }
 processChoice()
 {
-    case "${1:?}" in
+    local decision="${1:?}"; shift
+
+    [ "$isPrintDecision" ] && [ "$choice" != 'h' ] && printf '%s\n' "$decision"
+
+    case "$decision" in
 	h)
 	    timespanDuration="$(getTimespanDuration)"
 
