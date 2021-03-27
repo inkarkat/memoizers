@@ -254,7 +254,7 @@ processChoice()
 	    nq=$MEMOIZEDECISION_NEGATIVE_OPTION_ACCELERATOR_SUFFIX
 	    gp="${MEMOIZEDECISION_POSITIVE_OPTION_GROUP_PREFIX}${group}${MEMOIZEDECISION_POSITIVE_OPTION_GROUP_SUFFIX}"
 	    gn="${MEMOIZEDECISION_NEGATIVE_OPTION_GROUP_PREFIX}${group}${MEMOIZEDECISION_NEGATIVE_OPTION_GROUP_SUFFIX}"
-	    cat <<EOF
+	    cat >/dev/tty <<EOF
 ${pos}${pp}c${pq}onfirm each${poe}: Accept once; continue asking for this particular $subject, even
 		if it occurs again soon.
 ${pos}${pp}y${pq}es${poe}         : Only this particular $subject, now and for $timespanDuration.
