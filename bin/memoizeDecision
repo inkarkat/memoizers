@@ -191,27 +191,30 @@ marker()
 writeMarker()
 {
     local subject=${1:?}; shift
+    local escapedSubject="${subject//	/ }"
     local exitStatus=${1:?}; shift
 
     typeset -a foreverArgs=()
     local isForever=$1; shift
     [ "$isForever" ] && foreverArgs=(--timestamp "$FOREVER_EPOCH")
 
-    marker --fallback-subject '*' --update "$subject" --context "$exitStatus" "${foreverArgs[@]}" || exit 3
+    marker --fallback-subject '*' --update "$escapedSubject" --context "$exitStatus" "${foreverArgs[@]}" || exit 3
     return $exitStatus
 }
 
 hasMarker()
 {
     local subject=${1:?}; shift
-    markerExitStatus="$(marker --fallback-subject '*' --query "$subject" --within "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" --get-context)" || return $?
+    local escapedSubject="${subject//	/ }"
+    markerExitStatus="$(marker --fallback-subject '*' --query "$escapedSubject" --within "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" --get-context)" || return $?
 }
 
 getMarkerExitStatusAndTimestamp()
 {
     markerExitStatus=
     markerTimestamp=
-    local exitStatusAndTimestamp; exitStatusAndTimestamp="$(marker --query "$markerSubject" "$@" --get-context --get-timestamp)" || return $?
+    local escapedMarkerSubject="${markerSubject//	/ }"
+    local exitStatusAndTimestamp; exitStatusAndTimestamp="$(marker --query "$escapedMarkerSubject" "$@" --get-context --get-timestamp)" || return $?
 
     {
 	IFS=$'\n' read -r markerExitStatus
