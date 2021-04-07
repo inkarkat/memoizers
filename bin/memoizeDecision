@@ -266,25 +266,23 @@ processChoice()
 	    pq=$MEMOIZEDECISION_POSITIVE_OPTION_ACCELERATOR_SUFFIX
 	    np=$MEMOIZEDECISION_NEGATIVE_OPTION_ACCELERATOR_PREFIX
 	    nq=$MEMOIZEDECISION_NEGATIVE_OPTION_ACCELERATOR_SUFFIX
-	    gp="${MEMOIZEDECISION_POSITIVE_OPTION_GROUP_PREFIX}${group}${MEMOIZEDECISION_POSITIVE_OPTION_GROUP_SUFFIX}"
-	    gn="${MEMOIZEDECISION_NEGATIVE_OPTION_GROUP_PREFIX}${group}${MEMOIZEDECISION_NEGATIVE_OPTION_GROUP_SUFFIX}"
 	    cat >/dev/tty <<EOF
 ${pos}${pp}c${pq}onfirm each${poe}: Accept once; continue asking for this particular $subject, even
 		if it occurs again soon.
 ${pos}${pp}y${pq}es${poe}         : Only this particular $subject, now and for $timespanDuration.
-${pos}${pp}a${pq}ny${poe}         : Every subject in $pg (not just $subject),
+${pos}${pp}a${pq}ny${poe}         : Every subject in $group (not just $subject),
 		now and for $timespanDuration.
 ${pos}a${pp}l${pq}ways${poe}      : This particular $subject, now and in eternity.
-${pos}${pp}A${pq}ny always${poe}  : Every subject in $pg, now and in eternity.
+${pos}${pp}A${pq}ny always${poe}  : Every subject in $group, now and in eternity.
 
 ${nos}${np}d${nq}ecline each${noe}: Not this one, and continue asking for this particular $subject,
 		even if it occurs again soon.
 ${nos}${np}n${nq}o${noe}          : Not this particular $subject, not now and not for $timespanDuration.
-${nos}n${np}o${nq}ne${noe}        : No subject in $ng (not just $subject),
+${nos}n${np}o${nq}ne${noe}        : No subject in $group (not just $subject),
 		not now and not for $timespanDuration.
 ${nos}ne${np}v${nq}er${noe}       : Not this particular $subject, not now and also never in
 		eternity.
-${nos}${np}N${nq}one never${noe}  : No subject in $ng, not now and also never in eternity.
+${nos}${np}N${nq}one never${noe}  : No subject in $group, not now and also never in eternity.
 
 EOF
 	    ;;
