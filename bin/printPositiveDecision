@@ -1,0 +1,80 @@
+#!/bin/bash
+shopt -qs extglob
+
+: ${MEMOIZEDECISION_POSITIVE_PREFIX=[32m}
+: ${MEMOIZEDECISION_POSITIVE_SUFFIX=[0m}
+
+printShortUsage()
+{
+    # Note: short followed by long option; if the user knows the short one, she can
+    # skim the long one.
+    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--timespan TIMESPAN[SUFFIX]] [--timeout TIMEOUT[SUFFIX]] [-d|--default c|y|a|l|A|d|n|o|v|N] [-p|--print-decision] [-?|-h|--help]'
+}
+printUsage()
+{
+    # This is the short help when launched with no or incorrect arguments.
+    # It is printed to stderr to avoid accidental processing.
+    printShortUsage "$1" >&2
+    printf >&2 '\nTry %q --help for more information.\n' "$(basename "$1")"
+}
+printLongUsage()
+{
+    # This is the long "man page" when launched with the help argument.
+    # It is printed to stdout to allow paging with 'more'.
+    cat <<HELPDESCRIPTION
+Tell the user that ACTION will be performed on SUBJECT to turn it into
+STATE. This is a drop-in replacement for memoizeDecision that does not do any
+querying.
+HELPDESCRIPTION
+    echo
+    printShortUsage "$1"
+    echo
+    cat <<HELPTEXT
+Message to the user is
+    SUBJECT ([VERB] / does not) STATE. Will now ACTION.
+
+    --memoize-group|-g GROUP	Ignored. Category in the context of the subject.
+    --subject|-s SUBJECT	The subject on which ACTION is performed.
+    --verb VERB			The negation of what the desired STATE is.
+    --state|-t STATE		The desired, positive end state after performing
+				ACTION.
+    --action|-a ACTION		What gets executed if the user answers
+				positively.
+    --timespan TIMESPAN[SUFFIX]	Ignored.
+    --timeout TIMEOUT[SUFFIX]	Ignored.
+    --default|-d confirm-each|c|yes|y|any|a|always|l|any-always|A|decline-each|d|no|n|none|o|never|v|none-never|N
+				Ignored.
+
+EXIT STATUS:
+    0 so that ACTION will be performed
+    2 on invocation error
+HELPTEXT
+}
+
+subject=
+verb='does not'
+state=
+action=
+while [ $# -ne 0 ]
+do
+    case "$1" in
+	--help|-h|-\?)		shift; printLongUsage "$0"; exit 0;;
+	--memoize-group|-g)	shift; shift;;
+	--subject|-s)		shift; subject="$1"; shift;;
+	--verb)			shift; verb="$1"; shift;;
+	--state|-t)		shift; state="$1"; shift;;
+	--action|-a)		shift; action="$1"; shift;;
+	--timespan)		shift; shift;;
+	--timeout)		shift; shift;;
+	--default|-d)		shift; shift;;
+	--)			shift; break;;
+	-*)			{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
+	*)			break;;
+    esac
+done
+if [ $# -gt 0 -o -z "$subject" -o -z "$state" -o -z "$action" ]; then
+    printUsage "$0"
+    exit 2
+fi
+
+printf >&2 '%s%s %s %s. Will %s now.%s\n' "$MEMOIZEDECISION_POSITIVE_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_POSITIVE_SUFFIX"
