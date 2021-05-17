@@ -178,7 +178,7 @@ do
 	*)		break;;
     esac
 done
-if [ $# -gt 0 -o ! "$group" -o ! "$subject" -o \( ! "$isGetDecision" -a -z "$decision" -a \( ! "$state" -o ! "$action" \) \) ]; then
+if [ $# -gt 0 -o -z "$group" -o -z "$subject" -o \( ! "$isGetDecision" -a -z "$decision" -a \( -z "$state" -o -z "$action" \) \) ]; then
     printUsage "$0"
     exit 2
 fi
