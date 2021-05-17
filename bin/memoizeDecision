@@ -246,6 +246,7 @@ getTimespanDuration()
 {
     reldate "$@" --timespan "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" 2>/dev/null || printf '%d seconds' "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS"
 }
+
 processChoice()
 {
     local decision="${1:?}"; shift
@@ -300,6 +301,16 @@ EOF
     esac
 }
 
+printResult()
+{
+    local exitStatus="${1:?}"; shift
+    if [ $exitStatus -eq 0 ]; then
+	printf >&2 '%s%s %s %s. Will %s now.%s\n' "$MEMOIZEDECISION_POSITIVE_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_POSITIVE_SUFFIX"
+    else
+	printf >&2 '%s%s %s %s. Do not %s.%s\n' "$MEMOIZEDECISION_NEGATIVE_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_NEGATIVE_SUFFIX"
+    fi
+}
+
 if [ "$decision" ]; then
     processChoice "$decision"
 
@@ -342,11 +353,7 @@ fi
 while :
 do
     if hasMarker "$subject"; then
-	if [ $markerExitStatus -eq 0 ]; then
-	    printf >&2 '%s%s %s %s. Will %s now.%s\n' "$MEMOIZEDECISION_POSITIVE_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_POSITIVE_SUFFIX"
-	else
-	    printf >&2 '%s%s %s %s. Do not %s.%s\n' "$MEMOIZEDECISION_NEGATIVE_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_NEGATIVE_SUFFIX"
-	fi
+	printResult "$markerExitStatus"
 	exit $markerExitStatus
     else
 	# Force reading directly from terminal / null device if stdin is redirected,
