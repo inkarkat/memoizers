@@ -42,7 +42,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--timespan TIMESPAN[SUFFIX]] [--timeout TIMEOUT[SUFFIX]] [-d|--default c|y|a|l|A|d|n|o|v|N] [-p|--print-decision] [-?|-h|--help]'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--recall-only]|([--timespan TIMESPAN[SUFFIX]] [--timeout TIMEOUT[SUFFIX]]) [-d|--default c|y|a|l|A|d|n|o|v|N] [-p|--print-decision] [-?|-h|--help]'
     echo
     printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -c|--set-decision y|a|l|A|n|o|v|N [-a|--action ACTION] [--timespan TIMESPAN[SUFFIX]] [-p|--print-decision]'
     echo
@@ -87,13 +87,17 @@ MEMOIZEDECISION_CHOICE.
 				TIMESPAN (default ${MEMOIZEDECISION_VALID_TIMESPAN_SECONDS} seconds).
 				SUFFIX may be 's' for seconds (the default), 'm'
 				for minutes, 'h' for hours or 'd' for days.
+    --recall-only		Do not query the user; just return a previous
+				answer / the passed default.
     --timeout TIMEOUT[SUFFIX]	Do not wait indefinitely for the user's answer,
 				but abort / use the --default instead after
 				TIMEOUT have passed without an answer.
     --default|-d confirm-each|c|yes|y|any|a|always|l|any-always|A|decline-each|d|no|n|none|o|never|v|none-never|N
 				Use the provided answer if querying is not
-				possible (no terminal) or when the user fails to
-				answer within the provided --timeout.
+				possible (no terminal), when the user fails to
+				answer within the provided --timeout, or when
+				--recall-only is given and there's no previous
+				answer.
     --set-decision|-c yes|y|any|a|always|l|any-always|A|no|n|none|o|never|v|none-never|N
 				Instead of querying, use the passed decision as
 				if the user had chosen it (for --timespan
@@ -114,7 +118,9 @@ EXIT STATUS:
     0 if ACTION should be performed
     1 if not
     2 on invocation error
-    3 if memoization fails or the query times out without a given --default
+    3 if memoization fails or the query times out without a given --default, or
+      --recall-only is given but there's no previous answer and no --default
+      given, neither
 HELPTEXT
 }
 
@@ -135,6 +141,7 @@ state=
 action=
 default=
 decision=
+isRecallOnly=
 timeout=
 typeset -a readArgs=()
 isGetDecision=
@@ -149,6 +156,7 @@ do
 	--state|-t)		shift; state="$1"; shift;;
 	--action|-a)		shift; action="$1"; shift;;
 	--timespan)		shift; MEMOIZEDECISION_VALID_TIMESPAN_SECONDS="$(timeToSeconds "$1" timespan)" || exit $?; shift;;
+	--recall-only)	shift; isRecallOnly=t;;
 	--timeout)	shift; timeInSeconds="$(timeToSeconds "$1" timeout)" || exit $?; shift
 			timeoutPlural=s; [ "$timeInSeconds" = 1 ] && timeoutPlural=; timeout="Within $timeInSeconds second${timeoutPlural}: "; readArgs+=(-t "$timeInSeconds")
 			;;
@@ -355,6 +363,15 @@ do
     if hasMarker "$subject"; then
 	printResult "$markerExitStatus"
 	exit $markerExitStatus
+    elif [ "$isRecallOnly" ]; then
+	if [ -n "$default" ]; then
+	    processChoice "$default"
+	    status=$?
+	    printResult "$status"
+	    exit $status
+	else
+	    exit 3
+	fi
     else
 	# Force reading directly from terminal / null device if stdin is redirected,
 	# to avoid consuming input.
@@ -391,7 +408,7 @@ do
 	fi
 
 	if [ $status -gt 128 ]; then
-	    if [ "$default" ]; then
+	    if [ -n "$default" ]; then
 		choice="$default"
 	    else
 		exit 3
