@@ -127,11 +127,11 @@ HELPTEXT
 VALID_CHOICE_GLOB='confirm-each|c|yes|y|any|a|always|l|any-always|A|decline-each|d|no|n|none|o|never|v|none-never|N'
 assertValidChoice()
 {
-    eval "case \"\$1\" in
-	${VALID_CHOICE_GLOB}${2:+|}${2})
+    case "$1" in
+	@(${VALID_CHOICE_GLOB}${2:+|}${2}))
 	    return 0;;
 	*)  return 1;;
-    esac"
+    esac
 }
 
 group=
