@@ -124,7 +124,7 @@ update()
 }
 getModificationEpoch()
 {
-    stat -L --format %Y "${1:?}"
+    stat --dereference --format %Y "${1:?}"
 }
 
 
