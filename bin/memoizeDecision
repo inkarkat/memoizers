@@ -144,7 +144,7 @@ decision=
 isRecallOnly=
 timeout=
 typeset -a readArgs=()
-isGetDecision=
+specialFunction=
 isPrintDecision=
 while [ $# -ne 0 ]
 do
@@ -178,7 +178,7 @@ do
 			shift
 			;;
 	--get-decision|-q)
-			shift; isGetDecision=t;;
+			shift; specialFunction=getDecision;;
 	--print-decision|-p)
 			shift; isPrintDecision=t;;
 	--)		shift; break;;
@@ -186,7 +186,7 @@ do
 	*)		break;;
     esac
 done
-if [ $# -gt 0 -o -z "$group" -o -z "$subject" -o \( ! "$isGetDecision" -a -z "$decision" -a \( -z "$state" -o -z "$action" \) \) ]; then
+if [ $# -gt 0 -o -z "$group" -o -z "$subject" -o \( -z "$specialFunction" -a -z "$decision" -a \( -z "$state" -o -z "$action" \) \) ]; then
     printUsage "$0"
     exit 2
 fi
@@ -357,8 +357,8 @@ if [ "$decision" ]; then
     esac
 
     exit 0
-elif [ "$isGetDecision" ]; then
-    getDecision "$@"
+elif [ -n "$specialFunction" ]; then
+    $specialFunction "$@"
     exit 0
 fi
 
