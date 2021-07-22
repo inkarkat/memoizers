@@ -250,6 +250,29 @@ getMarkerSubjectAndExpiryAndExitStatusAndTimestamp()
     getMarkerExitStatusAndTimestamp && return 0
 }
 
+getDecision()
+{
+    getMarkerSubjectAndExpiryAndExitStatusAndTimestamp "$subject" || exit 1
+
+    isFallback=; [ "$markerSubject" = '*' ] && isFallback=t
+    isYes=; [ $markerExitStatus -eq 0 ] && isYes=t
+    isForever=; [ $markerTimestamp -eq $FOREVER_EPOCH ] && isForever=t
+    expired="${markerIsExpired:+expired }"
+
+    if   [ ! "$isFallback" ] && [   "$isYes" ] && [ ! "$isForever" ]; then result="${expired}yes"
+    elif [   "$isFallback" ] && [   "$isYes" ] && [ ! "$isForever" ]; then result="${expired}any"
+    elif [ ! "$isFallback" ] && [   "$isYes" ] && [   "$isForever" ]; then result="always"
+    elif [   "$isFallback" ] && [   "$isYes" ] && [   "$isForever" ]; then result="any-always"
+    elif [ ! "$isFallback" ] && [ ! "$isYes" ] && [ ! "$isForever" ]; then result="${expired}no"
+    elif [   "$isFallback" ] && [ ! "$isYes" ] && [ ! "$isForever" ]; then result="${expired}none"
+    elif [ ! "$isFallback" ] && [ ! "$isYes" ] && [   "$isForever" ]; then result="never"
+    elif [   "$isFallback" ] && [ ! "$isYes" ] && [   "$isForever" ]; then result="none-never"
+    else echo >&2 'ASSERT: Unhandled combination.'; exit 3
+    fi
+
+    printf '%s\n' "$result"
+}
+
 getTimespanDuration()
 {
     reldate "$@" --timespan "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" 2>/dev/null || printf '%d seconds' "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS"
@@ -335,25 +358,7 @@ if [ "$decision" ]; then
 
     exit 0
 elif [ "$isGetDecision" ]; then
-    getMarkerSubjectAndExpiryAndExitStatusAndTimestamp "$subject" || exit 1
-
-    isFallback=; [ "$markerSubject" = '*' ] && isFallback=t
-    isYes=; [ $markerExitStatus -eq 0 ] && isYes=t
-    isForever=; [ $markerTimestamp -eq $FOREVER_EPOCH ] && isForever=t
-    expired="${markerIsExpired:+expired }"
-
-    if   [ ! "$isFallback" ] && [   "$isYes" ] && [ ! "$isForever" ]; then result="${expired}yes"
-    elif [   "$isFallback" ] && [   "$isYes" ] && [ ! "$isForever" ]; then result="${expired}any"
-    elif [ ! "$isFallback" ] && [   "$isYes" ] && [   "$isForever" ]; then result="always"
-    elif [   "$isFallback" ] && [   "$isYes" ] && [   "$isForever" ]; then result="any-always"
-    elif [ ! "$isFallback" ] && [ ! "$isYes" ] && [ ! "$isForever" ]; then result="${expired}no"
-    elif [   "$isFallback" ] && [ ! "$isYes" ] && [ ! "$isForever" ]; then result="${expired}none"
-    elif [ ! "$isFallback" ] && [ ! "$isYes" ] && [   "$isForever" ]; then result="never"
-    elif [   "$isFallback" ] && [ ! "$isYes" ] && [   "$isForever" ]; then result="none-never"
-    else echo >&2 'ASSERT: Unhandled combination.'; exit 3
-    fi
-
-    printf '%s\n' "$result"
+    getDecision "$@"
     exit 0
 fi
 
