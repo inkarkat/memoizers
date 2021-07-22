@@ -172,7 +172,9 @@ do
 			shift
 			case "$1" in
 			    yes|y|any|a|always|l|any-always|A|no|n|none|o|never|v|none-never|N)
-				decision="$1";;
+				decision="$1"
+				specialFunction=setDecision
+				;;
 			    *)	printf >&2 'ERROR: Invalid decision: %s\n' "$1"; exit 2;;
 			esac
 			shift
@@ -273,6 +275,24 @@ getDecision()
     printf '%s\n' "$result"
 }
 
+setDecision()
+{
+    processChoice "${decision:?}"
+
+    [ "$action" ] && case "$decision" in
+	y|yes)		    printf >&2 'For this particular %s, will %s for the next %s.\n' "$subject" "$action" "$(getTimespanDuration)";;
+	a|any)		    printf >&2 'For every subject in %s, will %s for the next %s.\n' "$group" "$action" "$(getTimespanDuration)";;
+	l|always)	    printf >&2 'For this particular %s, will %s for eternity.\n' "$subject" "$action";;
+	A|any-always)	    printf >&2 'For every subject in %s, will %s for eternity.\n' "$group" "$action";;
+	n|no)		    printf >&2 'For this particular %s, will not %s for the next %s.\n' "$subject" "$action" "$(getTimespanDuration)";;
+	o|none)		    printf >&2 'For every subject in %s, will not %s for the next %s.\n' "$group" "$action" "$(getTimespanDuration)";;
+	v|never)	    printf >&2 'For this particular %s, will not %s for eternity.\n' "$subject" "$action";;
+	N|none-never)	    printf >&2 'For every subject in %s, will not %s for eternity.\n' "$group" "$action";;
+    esac
+
+    exit 0
+}
+
 getTimespanDuration()
 {
     reldate "$@" --timespan "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" 2>/dev/null || printf '%d seconds' "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS"
@@ -342,22 +362,7 @@ printResult()
     fi
 }
 
-if [ "$decision" ]; then
-    processChoice "$decision"
-
-    [ "$action" ] && case "$decision" in
-	y|yes)		    printf >&2 'For this particular %s, will %s for the next %s.\n' "$subject" "$action" "$(getTimespanDuration)";;
-	a|any)		    printf >&2 'For every subject in %s, will %s for the next %s.\n' "$group" "$action" "$(getTimespanDuration)";;
-	l|always)	    printf >&2 'For this particular %s, will %s for eternity.\n' "$subject" "$action";;
-	A|any-always)	    printf >&2 'For every subject in %s, will %s for eternity.\n' "$group" "$action";;
-	n|no)		    printf >&2 'For this particular %s, will not %s for the next %s.\n' "$subject" "$action" "$(getTimespanDuration)";;
-	o|none)		    printf >&2 'For every subject in %s, will not %s for the next %s.\n' "$group" "$action" "$(getTimespanDuration)";;
-	v|never)	    printf >&2 'For this particular %s, will not %s for eternity.\n' "$subject" "$action";;
-	N|none-never)	    printf >&2 'For every subject in %s, will not %s for eternity.\n' "$group" "$action";;
-    esac
-
-    exit 0
-elif [ -n "$specialFunction" ]; then
+if [ -n "$specialFunction" ]; then
     $specialFunction "$@"
     exit 0
 fi
