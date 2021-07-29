@@ -175,6 +175,7 @@ do
 				decision="$1"
 				specialFunction=setDecision
 				;;
+			    '')	echo >&2 'ERROR: Missing decision.'; exit 2;;
 			    *)	printf >&2 'ERROR: Invalid decision: %s\n' "$1"; exit 2;;
 			esac
 			shift
@@ -188,7 +189,7 @@ do
 	*)		break;;
     esac
 done
-if [ $# -gt 0 -o -z "$group" -o -z "$subject" -o \( -z "$specialFunction" -a -z "$decision" -a \( -z "$state" -o -z "$action" \) \) ]; then
+if [ $# -gt 0 -a -z "$specialFunction" -a \( -z "$group" -o -z "$subject" -o -z "$state" -o -z "$action" \) ]; then
     printUsage "$0"
     exit 2
 fi
@@ -254,6 +255,11 @@ getMarkerSubjectAndExpiryAndExitStatusAndTimestamp()
 
 getDecision()
 {
+    if [ $# -gt 0 -o -z "$group" -o -z "$subject" ]; then
+	printUsage "$0"
+	exit 2
+    fi
+
     getMarkerSubjectAndExpiryAndExitStatusAndTimestamp "$subject" || exit 1
 
     isFallback=; [ "$markerSubject" = '*' ] && isFallback=t
@@ -277,6 +283,11 @@ getDecision()
 
 setDecision()
 {
+    if [ $# -gt 0 -o -z "$group" -o -z "$subject" -o -z "$decision" ]; then
+	printUsage "$0"
+	exit 2
+    fi
+
     processChoice "${decision:?}"
 
     [ "$action" ] && case "$decision" in
