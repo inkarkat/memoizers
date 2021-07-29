@@ -46,7 +46,9 @@ printShortUsage()
     echo
     printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -c|--set-decision y|a|l|A|n|o|v|N [-a|--action ACTION] [--timespan TIMESPAN[SUFFIX]] [-p|--print-decision]'
     echo
-    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -q|--get-decision'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -q|--get-decision|-D|--delete-decision'
+    echo
+    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP --delete-all-decisions'
 }
 printUsage()
 {
@@ -109,6 +111,9 @@ MEMOIZEDECISION_CHOICE.
 				[expired] yes|[expired] any|always|any-always|
 				[expired] no|[expired] none|never|none-never
 				or exit with 1 if no decision for SUBJECT exists.
+    --delete-decision|-D	Forget any stored decision for SUBJECT.
+    --delete-all-decisions	Forget any stored decisions for the entire GROUP
+				(i.e. all SUBJECTs).
     --print-decision|-p		Also print the queryied (/ passed) decision to
 				stdout in a format that can then be passed to
 				--set-decision. Useful to automatically apply a
@@ -184,6 +189,10 @@ do
 			shift; specialFunction=getDecision;;
 	--print-decision|-p)
 			shift; isPrintDecision=t;;
+	--delete-decision|-D)
+			shift; specialFunction=deleteDecision;;
+	--delete-all-decisions)
+			shift; specialFunction=deleteAllDecisions;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
@@ -371,6 +380,26 @@ printResult()
     else
 	printf >&2 '%s%s %s %s. Do not %s.%s\n' "$MEMOIZEDECISION_NEGATIVE_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_NEGATIVE_SUFFIX"
     fi
+}
+
+deleteDecision()
+{
+    if [ $# -gt 0 -o -z "$group" -o -z "$subject" ]; then
+	printUsage "$0"
+	exit 2
+    fi
+
+    marker --delete "$subject"
+}
+
+deleteAllDecisions()
+{
+    if [ $# -gt 0 -o -z "$group" -o -n "$subject" ]; then
+	printUsage "$0"
+	exit 2
+    fi
+
+    marker --drop
 }
 
 if [ -n "$specialFunction" ]; then
