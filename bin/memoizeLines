@@ -105,6 +105,18 @@ if [ ${#commands[@]} -eq 0 ]; then
     exit 2
 fi >&2
 
+printCacheStatistics()
+{
+    if [ $lineCnt -eq 0 ]; then
+	printf >&2 '%s: No lines.\n' "$(basename "$0")"
+    else
+	lineCntPlural=s; [ $lineCnt -eq 1 ] && lineCntPlural=
+	cacheHitsPlural=s; [ $cacheHits -eq 1 ] && cacheHitsPlural=
+	printf >&2 '%s: %d line%s, %d cache hit%s (%d%%).\n' "$(basename "$0")" "$lineCnt" "$lineCntPlural" "$cacheHits" "$cacheHitsPlural" "$((cacheHits * 100 / lineCnt))"
+    fi
+}
+[ "$isVerbose" ] && trap printCacheStatistics EXIT
+
 transform()
 {
     if [ "$isNeedEval" ]; then
@@ -115,13 +127,15 @@ transform()
 }
 
 typeset -A cache=()
-
+let lineCnt=0 cacheHits=0
 isEOL=t
 while IFS=$'\n' read -r line || { isEOL=; [ -n "$line" ]; }
 do
+    let lineCnt+=1
     lineKey="${line:-$'\n'}"	# Empty key is not allowed in associative array; use newline instead, as it cannot occur in the input.
     if [ -n "${cache["$lineKey"]+t}" ]; then
 	result="${cache["$lineKey"]}"
+	let cacheHits+=1
     else
 	lineArg="$line"
 	[ "$isNeedEval" ] && printf -v lineArg '%q' "$lineArg"
