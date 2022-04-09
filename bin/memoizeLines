@@ -119,6 +119,13 @@ printCacheStatistics()
 }
 [ "$isVerbose" ] && trap printCacheStatistics EXIT
 
+getValidCachedResult()
+{
+    local key="${1:?}"; shift
+    [ -n "${cache["$key"]+t}" ] || return 1
+    result="${cache["$key"]}"
+}
+
 transform()
 {
     if [ "$isNeedEval" ]; then
@@ -135,8 +142,7 @@ while IFS=$'\n' read -r line || { isEOL=; [ -n "$line" ]; }
 do
     let lineCnt+=1
     lineKey="${line:-$'\n'}"	# Empty key is not allowed in associative array; use newline instead, as it cannot occur in the input.
-    if [ -n "${cache["$lineKey"]+t}" ]; then
-	result="${cache["$lineKey"]}"
+    if getValidCachedResult "$lineKey"; then
 	let cacheHits+=1
 
 	[ ! "$isVeryVerbose" ] || printf >&2 '%s: Cache hit for "%s": %s\n' "$scriptName" "$line" "$result"
