@@ -142,10 +142,10 @@ while IFS=$'\n' read -r line || { isEOL=; [ -n "$line" ]; }
 do
     let lineCnt+=1
     lineKey="${line:-$'\n'}"	# Empty key is not allowed in associative array; use newline instead, as it cannot occur in the input.
+    cacheStatus='Cache miss'
     if getValidCachedResult "$lineKey"; then
 	let cacheHits+=1
-
-	[ ! "$isVeryVerbose" ] || printf >&2 '%s: Cache hit for "%s": %s\n' "$scriptName" "$line" "$result"
+	cacheStatus='Cache hit'
     else
 	lineArg="$line"
 	[ "$isNeedEval" ] && printf -v lineArg '%q' "$lineArg"
@@ -163,9 +163,8 @@ do
 	}
 
 	cache["$lineKey"]="$result"
-
-	[ ! "$isVeryVerbose" ] || printf >&2 '%s: Cache miss for "%s": %s\n' "$scriptName" "$line" "$result"
     fi
 
+    [ ! "$isVeryVerbose" ] || printf >&2 '%s: %s for "%s": %s\n' "$scriptName" "$cacheStatus" "$line" "$result"
     printf "%s${isEOL:+$'\n'}" "$result"
 done
