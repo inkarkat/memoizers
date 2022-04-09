@@ -10,7 +10,7 @@ load fixture
 }
 
 @test "command failing later exits with status and aborts the output there" {
-    runWithInput $'first\nfoo\nfoo bar\nfoo\nbar\nlast' memoizeLines --command 'recorder | sed -e "/bar/q 99"'
+    runWithInput $'first\nfoo\nfoo bar\nfoo\nbar\nlast' memoizeLines --command failOnBarTransformer
     [ $status -eq 99 ]
     [ "$output" = "first
 foo" ]

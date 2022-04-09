@@ -50,6 +50,11 @@ filterTransformer()
 }
 export -f filterTransformer
 
+failOnBarTransformer()
+{
+    recorder | sed -e "/bar/q 99"
+}
+export -f failOnBarTransformer
 argTransformer()
 {
     printf '%s\n' "$*" | recorder | sed -e 's/.*/[&]/'
