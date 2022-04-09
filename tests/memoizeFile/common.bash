@@ -20,6 +20,10 @@ assert_exists()
 {
     [ -e "$FILE" ]
 }
+dump_updates()
+{
+    printf >&3 'Got %d update(s)\n' "$(grep -c '^update' "$FILE")"
+}
 assert_updates()
 {
     [ $(grep -c '^update' "$FILE") -eq ${1:-1} ]
