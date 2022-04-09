@@ -7,18 +7,6 @@ setup()
     rm -f -- "$RECORD"
 }
 
-transformer()
-{
-    tee -a -- "$RECORD" | sed -e 's/.*/[&]/'
-}
-export -f transformer
-
-multiLineTransformer()
-{
-    tee -a -- "$RECORD" | sed -e 's/.*/Start of &:\n  &\n---/'
-}
-export -f multiLineTransformer
-
 dump_input()
 {
     prefix '#' "$RECORD" >&3
@@ -37,3 +25,21 @@ runWithInput()
 {
     run inputWrapper "$@"
 }
+
+transformer()
+{
+    tee -a -- "$RECORD" | sed -e 's/.*/[&]/'
+}
+export -f transformer
+
+multiLineTransformer()
+{
+    tee -a -- "$RECORD" | sed -e 's/.*/Start of &:\n  &\n---/'
+}
+export -f multiLineTransformer
+
+filterTransformer()
+{
+    tee -a -- "$RECORD" | sed -e '/^f/d' -e 's/.*/[&]/'
+}
+export -f filterTransformer

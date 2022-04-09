@@ -51,3 +51,12 @@ Start of bar:
 ---" ]
     assert_input $'foo\nbar'
 }
+
+@test "transform to empty lines" {
+    runWithInput $'foo\nfoo\nbar' memoizeLines filterTransformer
+    [ $status -eq 0 ]
+    [ "$output" = "
+
+[bar]" ]
+    assert_input $'foo\nbar'
+}
