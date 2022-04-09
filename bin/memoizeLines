@@ -115,19 +115,27 @@ transform()
     fi
 }
 
+typeset -A cache=()
+
 isEOL=t
 while IFS=$'\n' read -r line || { isEOL=; [ -n "$line" ]; }
 do
-    lineArg="$line"
-    [ "$isNeedEval" ] && printf -v lineArg '%q' "$lineArg"
-    typeset -a interpolatedCommands=("${commands[@]//"$argMarker"/$lineArg}")
-    result="$(
-	if [ "${interpolatedCommands[*]}" = "${commands[*]}" ]; then
-	    printf '%s\n' "$line" | transform
-	else
-	    transform
-	fi
-    )" || exit $?
+    if [ -n "${cache["$line"]+t}" ]; then
+	result="${cache["$line"]}"
+    else
+	lineArg="$line"
+	[ "$isNeedEval" ] && printf -v lineArg '%q' "$lineArg"
+	typeset -a interpolatedCommands=("${commands[@]//"$argMarker"/$lineArg}")
+	result="$(
+	    if [ "${interpolatedCommands[*]}" = "${commands[*]}" ]; then
+		printf '%s\n' "$line" | transform
+	    else
+		transform
+	    fi
+	)" || exit $?
+
+	cache["$line"]="$result"
+    fi
 
     printf "%s${isEOL:+$'\n'}" "$result"
 done

@@ -11,6 +11,15 @@ transformer()
 }
 export -f transformer
 
+dump_input()
+{
+    prefix '#' "$RECORD" >&3
+}
+assert_input()
+{
+    [ "$(cat -- "$RECORD")" = "${1?}" ]
+}
+
 inputWrapper()
 {
     local input="$1"; shift
@@ -32,4 +41,14 @@ runWithInput()
     [ $status -eq 0 ]
     [ "$output" = "[first]
 [second]" ]
+    assert_input $'first\nsecond'
+}
+
+@test "transform two identical lines" {
+    runWithInput $'foo\nfoo\nbar' memoizeLines transformer
+    [ $status -eq 0 ]
+    [ "$output" = "[foo]
+[foo]
+[bar]" ]
+    assert_input $'foo\nbar'
 }
