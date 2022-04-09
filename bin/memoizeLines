@@ -1,0 +1,106 @@
+#!/bin/bash
+shopt -qs extglob
+
+: ${MEMOIZELINES_ARG_MARKER='{}'}
+argMarker="$MEMOIZELINES_ARG_MARKER"; unset MEMOIZELINES_ARG_MARKER
+
+printShortUsage()
+{
+    printf 'Usage: cat SOURCE-FILE [...] | %q %s\n' "$(basename "$1")" '[-v|--verbose [-v|--verbose]] [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+}
+printUsage()
+{
+    # This is the short help when launched with no or incorrect arguments.
+    # It is printed to stderr to avoid accidental processing.
+    printShortUsage "$1" >&2
+    printf >&2 '\nTry %q --help for more information.\n' "$(basename "$1")"
+}
+printLongUsage()
+{
+    # This is the long "man page" when launched with the help argument.
+    # It is printed to stdout to allow paging with 'more'.
+    cat <<HELPDESCRIPTION
+Read lines from standard input; if a line has not yet been seen or its last
+processing is older than VALID-TIMESPAN, transform it through COMMAND, return
+its output, and store that output for future occurences of that line (which will
+then bypass the transformation through COMMAND and directly return the stored
+output again).
+HELPDESCRIPTION
+    echo
+    printShortUsage "$1"
+    echo
+    cat <<HELPTEXT
+    --verbose|-v	Print cache hit statistics at the end. When given twice,
+			also print information about each line's state.
+    --timeout|-t|--for VALID-TIMESPAN[SUFFIX]
+			If the last transformation of a line is older, execute
+			COMMAND to transform the line. VALID-TIMESPAN is
+			NUMBER[SUFFIX], where SUFFIX may be 's' for seconds (the
+			default), 'm' for minutes, 'h' for hours or 'd' for
+			days.
+    --timestamp|-T EPOCH
+			Use EPOCH instead of the current time.
+    --command|-c CMD	The command line to be executed to transform a line;
+			${argMarker:+inside CMD, $argMarker is replaced with the line. Else,}
+			the input is passed via standard input. The transformed
+			line is read from standard output.
+			When this is a simple command, it can also be passed as
+			such.
+EXIT STATUS:
+    0	Lines either existed (and are recent enough), or had to be updated and
+	that succeeded.
+    2	Bad invocation, wrong or missing command-line arguments.
+    3	Internal error or failed assertion.
+    *	Any error from COMMAND is returned as-is.
+
+Example:
+HELPTEXT
+printf '%s | %q %s\n' "repeat -n 10 -c 'echo \$((RANDOM %6))'" "$(basename "$1")" "-c 'printf \"%s: \" {}; date'"
+}
+
+isVerbose=
+validity=
+isNeedEval=
+now=
+typeset -a commands=()
+while [ $# -ne 0 ]
+do
+    case "$1" in
+	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
+	--verbose|-v)	shift; isVerbose=t;;
+	--file|-f)	shift; file="$1"; shift;;
+	--timeout|-t|--for)
+			shift
+			case "$1" in
+			    +([0-9])?(s))   validity="${1%s}";;
+			    +([0-9])m)	    validity=$((${1%m} * 60));;
+			    +([0-9])h)	    validity=$((${1%h} * 3600));;
+			    +([0-9])d)	    validity=$((${1%d} * 86400));;
+			    *)		    printf >&2 'ERROR: Illegal timespan: %s\n' "$1"; exit 2;;
+			esac
+			shift
+			;;
+	--timestamp|-T)	shift; now="$1"; shift;;
+	--command|-c)	shift; commands+=(${commands:+|} "$1"); isNeedEval=t; shift;;
+	--)		shift; break;;
+	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
+	*)		break;;
+    esac
+done
+if [ $# -ne 0 ]; then
+    if [ "$isNeedEval" ]; then
+	# Combine --command and SIMPLECOMMAND; need to quote SIMPLECOMMAND to
+	# undo the effects of eval.
+	printf -v quotedSimpleCommand '%q ' "$@"
+	printf -v escapedFileMarker %q "$argMarker"
+	commands+=(${commands:+|} "${quotedSimpleCommand//"$escapedFileMarker"/$argMarker}")	# %q escapes {}, we don't want that to have it interpolated later.
+    else
+	commands=("$@")
+    fi
+fi
+if [ ${#commands[@]} -eq 0 ]; then
+    echo 'ERROR: No COMMAND(s) specified; need to pass -c|--command "COMMANDLINE", or SIMPLECOMMAND.'
+    echo
+    printUsage "$0"
+    exit 2
+fi >&2
