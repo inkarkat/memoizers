@@ -36,3 +36,18 @@ load fixture
 [baz]" ]
     assert_input $'foo\n\nbar\nbaz'
 }
+
+@test "transform to multiple lines" {
+    runWithInput $'foo\nfoo\nbar' memoizeLines multiLineTransformer
+    [ $status -eq 0 ]
+    [ "$output" = "Start of foo:
+  foo
+---
+Start of foo:
+  foo
+---
+Start of bar:
+  bar
+---" ]
+    assert_input $'foo\nbar'
+}

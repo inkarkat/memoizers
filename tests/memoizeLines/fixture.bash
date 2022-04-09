@@ -13,6 +13,12 @@ transformer()
 }
 export -f transformer
 
+multiLineTransformer()
+{
+    tee -a -- "$RECORD" | sed -e 's/.*/Start of &:\n  &\n---/'
+}
+export -f multiLineTransformer
+
 dump_input()
 {
     prefix '#' "$RECORD" >&3
