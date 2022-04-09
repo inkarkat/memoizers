@@ -1,4 +1,5 @@
 #!/bin/bash
+set -o pipefail
 shopt -qs extglob
 
 : ${MEMOIZELINES_ARG_MARKER='{}'}
@@ -104,3 +105,29 @@ if [ ${#commands[@]} -eq 0 ]; then
     printUsage "$0"
     exit 2
 fi >&2
+
+transform()
+{
+    if [ "$isNeedEval" ]; then
+	eval "${interpolatedCommands[@]}"
+    else
+	"${interpolatedCommands[@]}"
+    fi
+}
+
+isEOL=t
+while IFS=$'\n' read -r line || { isEOL=; [ -n "$line" ]; }
+do
+    lineArg="$line"
+    [ "$isNeedEval" ] && printf -v lineArg '%q' "$lineArg"
+    typeset -a interpolatedCommands=("${commands[@]//"$argMarker"/$lineArg}")
+    result="$(
+	if [ "${interpolatedCommands[*]}" = "${commands[*]}" ]; then
+	    printf '%s\n' "$line" | transform
+	else
+	    transform
+	fi
+    )" || exit $?
+
+    printf "%s${isEOL:+$'\n'}" "$result"
+done
