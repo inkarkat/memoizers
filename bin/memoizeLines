@@ -80,6 +80,7 @@ do
 			    *)		    printf >&2 'ERROR: Illegal timespan: %s\n' "$1"; exit 2;;
 			esac
 			shift
+			SECONDS="$(date +%s)" || exit 3
 			;;
 	--timestamp|-T)	shift; now="$1"; shift;;
 	--command|-c)	shift; commands+=(${commands:+|} "$1"); isNeedEval=t; shift;;
@@ -123,6 +124,15 @@ getValidCachedResult()
 {
     local key="${1:?}"; shift
     [ -n "${cache["$key"]+t}" ] || return 1
+
+    if [ -n "$validity" ]; then
+	local cacheTime="${cacheTimestamps["$key"]}"
+	if [ $((${now:-$SECONDS} - cacheTime)) -gt $validity ]; then
+	    cacheStatus='Outdated cache entry'
+	    return 1
+	fi
+    fi
+
     result="${cache["$key"]}"
 }
 
@@ -136,6 +146,7 @@ transform()
 }
 
 typeset -A cache=()
+typeset -A cacheTimestamps=()
 let lineCnt=0 cacheHits=0
 isEOL=t
 while IFS=$'\n' read -r line || { isEOL=; [ -n "$line" ]; }
@@ -163,6 +174,7 @@ do
 	}
 
 	cache["$lineKey"]="$result"
+	[ -z "$validity" ] || cacheTimestamps["$lineKey"]=${now:-$SECONDS}
     fi
 
     [ ! "$isVeryVerbose" ] || printf >&2 '%s: %s for "%s": %s\n' "$scriptName" "$cacheStatus" "$line" "$result"
