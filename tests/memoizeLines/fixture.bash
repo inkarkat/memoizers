@@ -13,7 +13,10 @@ dump_input()
 }
 assert_input()
 {
-    [ "$(cat -- "$RECORD")" = "${1?}" ]
+    if ! [ "$(cat -- "$RECORD")" = "${1?}" ]; then
+	dump_input
+	return 1
+    fi
 }
 
 inputWrapper()
