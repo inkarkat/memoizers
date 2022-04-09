@@ -6,11 +6,11 @@ fileMarker="$MEMOIZEFILE_FILE_MARKER"; unset MEMOIZEFILE_FILE_MARKER
 
 printShortUsage()
 {
-    # Note: short followed by long option; if the user knows the short one, she can
-    # skim the long one.
-    printf 'Usage: cat FILE | %q %s\n' "$(basename "$1")" '[-v|--verbose] -f|--file FILE [-t|--for VALID-TIMESPAN[SUFFIX]] [-t|--timestamp EPOCH]'
+    local commonArgs='[-v|--verbose] -f|--file FILE [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH]'
+
+    printf 'Usage: cat SOURCE-FILE [...] | %q %s\n' "$(basename "$1")" "$commonArgs"
     echo
-    printf 'Usage: %q %s\n' "$(basename "$1")" '[...] [-r|--redirect] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+    printf 'Usage: %q %s %s\n' "$(basename "$1")" "$commonArgs" '[-r|--redirect] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
 }
 printUsage()
 {
@@ -33,7 +33,7 @@ HELPDESCRIPTION
     cat <<HELPTEXT
     --verbose|-v	Print additional information about the FILE state.
     --file|-f FILE	The target filespec to check and potentially update.
-    --for|-t VALID-TIMESPAN[SUFFIX]
+    --timeout|-t|--for VALID-TIMESPAN[SUFFIX]
 			If the last modification of FILE is older, execute
 			COMMAND to update the FILE. VALID-TIMESPAN is
 			NUMBER[SUFFIX], where SUFFIX may be 's' for seconds (the
@@ -43,7 +43,7 @@ HELPDESCRIPTION
 			(if the command succeeds). Saves you from including the
 			redirection in COMMANDLINE and makes it possible to use
 			SIMPLECOMMAND.
-    --timestamp|-t EPOCH
+    --timestamp|-T EPOCH
 			Use EPOCH instead of the current time.
     --command|-c CMD	The command line to be executed to update the FILE (as a
 			side effect, or by redirecting its output into it). When
@@ -76,7 +76,8 @@ do
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--verbose|-v)	shift; isVerbose=t;;
 	--file|-f)	shift; file="$1"; shift;;
-	--for|-t)	shift
+	--timeout|-t|--for)
+			shift
 			case "$1" in
 			    +([0-9])?(s))   validity="${1%s}";;
 			    +([0-9])m)	    validity=$((${1%m} * 60));;
@@ -87,7 +88,7 @@ do
 			shift
 			;;
 	--redirect|-r)	shift; isRedirect=t;;
-	--timestamp|-t)	shift; now="$1"; shift;;
+	--timestamp|-T)	shift; now="$1"; shift;;
 	--command|-c)	shift; commands+=(${commands:+;} "$1"); isNeedEval=t; shift;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
