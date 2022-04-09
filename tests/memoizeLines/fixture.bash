@@ -26,30 +26,35 @@ runWithInput()
     run inputWrapper "$@"
 }
 
+recorder()
+{
+    tee -a -- "$RECORD"
+}
+export -f recorder
+
 transformer()
 {
-    tee -a -- "$RECORD" | sed -e 's/.*/[&]/'
+    recorder | sed -e 's/.*/[&]/'
 }
 export -f transformer
 
 multiLineTransformer()
 {
-    tee -a -- "$RECORD" | sed -e 's/.*/Start of &:\n  &\n---/'
+    recorder | sed -e 's/.*/Start of &:\n  &\n---/'
 }
 export -f multiLineTransformer
 
 filterTransformer()
 {
-    tee -a -- "$RECORD" | sed -e '/^f/d' -e 's/.*/[&]/'
+    recorder | sed -e '/^f/d' -e 's/.*/[&]/'
 }
 export -f filterTransformer
 
 argTransformer()
 {
-    printf '%s\n' "$*" | tee -a -- "$RECORD" | sed -e 's/.*/[&]/'
+    printf '%s\n' "$*" | recorder | sed -e 's/.*/[&]/'
 }
 export -f argTransformer
 
-export -f transformer
 export uppercaseCommand=(tr a-z A-Z)
 export firstToBeginCommand=(sed 's/first/begin/')
