@@ -60,6 +60,7 @@ printf '%s | %q %s\n' "repeat -n 10 -c 'echo \$((RANDOM %6))'" "$(basename "$1")
 }
 
 isVerbose=
+isVeryVerbose=
 validity=
 isNeedEval=
 now=
@@ -68,7 +69,7 @@ while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
-	--verbose|-v)	shift; isVerbose=t;;
+	--verbose|-v)	shift; [ "$isVerbose" ] && isVeryVerbose=t; isVerbose=t;;
 	--timeout|-t|--for)
 			shift
 			case "$1" in
@@ -105,14 +106,15 @@ if [ ${#commands[@]} -eq 0 ]; then
     exit 2
 fi >&2
 
+readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
 printCacheStatistics()
 {
     if [ $lineCnt -eq 0 ]; then
-	printf >&2 '%s: No lines.\n' "$(basename "$0")"
+	printf >&2 '%s: No lines.\n' "$scriptName"
     else
 	lineCntPlural=s; [ $lineCnt -eq 1 ] && lineCntPlural=
 	cacheHitsPlural=s; [ $cacheHits -eq 1 ] && cacheHitsPlural=
-	printf >&2 '%s: %d line%s, %d cache hit%s (%d%%).\n' "$(basename "$0")" "$lineCnt" "$lineCntPlural" "$cacheHits" "$cacheHitsPlural" "$((cacheHits * 100 / lineCnt))"
+	printf >&2 '%s: %d line%s, %d cache hit%s (%d%%).\n' "$scriptName" "$lineCnt" "$lineCntPlural" "$cacheHits" "$cacheHitsPlural" "$((cacheHits * 100 / lineCnt))"
     fi
 }
 [ "$isVerbose" ] && trap printCacheStatistics EXIT
@@ -136,6 +138,8 @@ do
     if [ -n "${cache["$lineKey"]+t}" ]; then
 	result="${cache["$lineKey"]}"
 	let cacheHits+=1
+
+	[ ! "$isVeryVerbose" ] || printf >&2 '%s: Cache hit for "%s": %s\n' "$scriptName" "$line" "$result"
     else
 	lineArg="$line"
 	[ "$isNeedEval" ] && printf -v lineArg '%q' "$lineArg"
@@ -146,9 +150,15 @@ do
 	    else
 		transform
 	    fi
-	)" || exit $?
+	)" || {
+	    status=$?
+	    [ ! "$isVeryVerbose" ] || printf >&2 '%s: Transformation failed for "%s" (%d)\n' "$scriptName" "$line" "$status"
+	    exit $status
+	}
 
 	cache["$lineKey"]="$result"
+
+	[ ! "$isVeryVerbose" ] || printf >&2 '%s: Cache miss for "%s": %s\n' "$scriptName" "$line" "$result"
     fi
 
     printf "%s${isEOL:+$'\n'}" "$result"
