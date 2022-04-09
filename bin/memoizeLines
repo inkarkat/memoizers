@@ -69,7 +69,6 @@ do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--verbose|-v)	shift; isVerbose=t;;
-	--file|-f)	shift; file="$1"; shift;;
 	--timeout|-t|--for)
 			shift
 			case "$1" in
