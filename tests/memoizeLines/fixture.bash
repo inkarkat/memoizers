@@ -43,3 +43,6 @@ filterTransformer()
     tee -a -- "$RECORD" | sed -e '/^f/d' -e 's/.*/[&]/'
 }
 export -f filterTransformer
+
+export uppercaseCommand=(tr a-z A-Z)
+export firstToBeginCommand=(sed 's/first/begin/')
