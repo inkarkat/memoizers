@@ -54,3 +54,13 @@ memoizeLines: 10 lines, 6 cache hits (60%)." ]
 memoizeLines: 4 lines, 3 cache hits (75%)." ]
     assert_input 'foo'
 }
+
+@test "verbose command failing later appends statistics so far" {
+    runWithInput $'first\nfoo\nfoo\nfoo bar\nfoo\nbar\nlast' memoizeLines --verbose --command failOnBarTransformer
+    [ $status -eq 99 ]
+    [ "$output" = "first
+foo
+foo
+memoizeLines: 4 lines, 1 cache hit (25%)." ]
+    assert_input $'first\nfoo\nfoo bar'
+}
