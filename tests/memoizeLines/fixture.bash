@@ -44,5 +44,12 @@ filterTransformer()
 }
 export -f filterTransformer
 
+argTransformer()
+{
+    printf '%s\n' "$*" | tee -a -- "$RECORD" | sed -e 's/.*/[&]/'
+}
+export -f argTransformer
+
+export -f transformer
 export uppercaseCommand=(tr a-z A-Z)
 export firstToBeginCommand=(sed 's/first/begin/')
