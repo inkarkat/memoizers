@@ -120,8 +120,9 @@ typeset -A cache=()
 isEOL=t
 while IFS=$'\n' read -r line || { isEOL=; [ -n "$line" ]; }
 do
-    if [ -n "${cache["$line"]+t}" ]; then
-	result="${cache["$line"]}"
+    lineKey="${line:-$'\n'}"	# Empty key is not allowed in associative array; use newline instead, as it cannot occur in the input.
+    if [ -n "${cache["$lineKey"]+t}" ]; then
+	result="${cache["$lineKey"]}"
     else
 	lineArg="$line"
 	[ "$isNeedEval" ] && printf -v lineArg '%q' "$lineArg"
@@ -134,7 +135,7 @@ do
 	    fi
 	)" || exit $?
 
-	cache["$line"]="$result"
+	cache["$lineKey"]="$result"
     fi
 
     printf "%s${isEOL:+$'\n'}" "$result"
