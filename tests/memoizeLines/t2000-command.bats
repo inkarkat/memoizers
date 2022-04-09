@@ -1,6 +1,15 @@
 #!/usr/bin/env bats
 
-export transformer=(sed -e 's/.*/[&]/')
+export RECORD="${BATS_TMPDIR}/record"
+setup()
+{
+    rm -f -- "$RECORD"
+}
+transformer()
+{
+    tee -a -- "$RECORD" | sed -e 's/.*/[&]/'
+}
+export -f transformer
 
 inputWrapper()
 {
@@ -13,13 +22,13 @@ runWithInput()
 }
 
 @test "transform first line" {
-    runWithInput 'first' memoizeLines "${transformer[@]}"
+    runWithInput 'first' memoizeLines transformer
     [ $status -eq 0 ]
     [ "$output" = "[first]" ]
 }
 
 @test "transform two unique lines" {
-    runWithInput $'first\nsecond' memoizeLines "${transformer[@]}"
+    runWithInput $'first\nsecond' memoizeLines transformer
     [ $status -eq 0 ]
     [ "$output" = "[first]
 [second]" ]
