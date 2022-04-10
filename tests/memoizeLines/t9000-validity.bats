@@ -1,18 +1,18 @@
 #!/usr/bin/env bats
 
 load fixture
-load interval
+load delay
 
 @test "cache stays valid by default" {
-    runWithIntervalInput .5 $'foo\nfoo' memoizeLines transformer
+    runWithDelayInput 'foo' .5 'foo' -- memoizeLines transformer
     [ $status -eq 0 ]
     [ "$output" = "[foo]
 [foo]" ]
     assert_input 'foo'
 }
 
-@test "two second delay invalidates cache" {
-    runWithIntervalInput .5 $'foo\nfoo\nbar\nfoo\nfoo\n\nbar' memoizeLines --for 1s transformer
+@test "a delay invalidates cache" {
+    runWithDelayInput $'foo\nfoo\nbar\nfoo' 2 $'foo\n\nbar' -- memoizeLines --for 1s transformer
     [ $status -eq 0 ]
     [ "$output" = "[foo]
 [foo]
