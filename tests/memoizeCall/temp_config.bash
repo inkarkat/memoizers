@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export XDG_CONFIG_HOME="$BATS_TMPDIR"
+export XDG_DATA_HOME="$BATS_TMPDIR"
 
 setup() {
     clean_config
@@ -10,13 +10,13 @@ setup() {
 
 clean_config()
 {
-    rm -rf "${XDG_CONFIG_HOME}/memoizeCall" "${XDG_CONFIG_HOME}/memoizeCall.d"
+    rm -rf "${XDG_DATA_HOME}/memoizeCall" "${XDG_DATA_HOME}/memoizeCall.d"
 }
 
 initialize_config()
 {
     [ "$1" = from ] || exit 2
-    cp -f "${BATS_TEST_DIRNAME}/config/${2:?}" "${XDG_CONFIG_HOME}/memoizeCall"
+    cp -f "${BATS_TEST_DIRNAME}/config/${2:?}" "${XDG_DATA_HOME}/memoizeCall"
 }
 
 assert_last()
@@ -27,5 +27,5 @@ assert_last()
 
 dump_config()
 {
-    sed >&3 -e 's/^/#/' -- "${XDG_CONFIG_HOME}/memoizeCall"
+    sed >&3 -e 's/^/#/' -- "${XDG_DATA_HOME}/memoizeCall"
 }
