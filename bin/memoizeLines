@@ -81,11 +81,12 @@ dropOn=
 isNeedEval=
 now=
 typeset -a commands=()
+typeset -a onExit=()
 while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
-	--verbose|-v)	shift; [ "$isVerbose" ] && isVeryVerbose=t; isVerbose=t;;
+	--verbose|-v)	shift; [ "$isVerbose" ] && isVeryVerbose=t || onExit+=(printCacheStatistics); isVerbose=t;;
 	--size|-s)	shift; size="$1"; shift;;
 	--timeout|-t|--for)
 			shift
@@ -100,7 +101,7 @@ do
 			SECONDS="$(date +%s)" || exit 3
 			;;
 	--timestamp|-T)	shift; now="$1"; shift;;
-	--persist|-w)	shift; isPersist=t;;
+	--persist|-w)	shift; isPersist=t; onExit+=(writeCache);;
 	--id|-i)	shift; id="$1"; shift;;
 	--drop-on|-d)	shift; dropOn="$1"; shift;;
 	--command|-c)	shift; commands+=(${commands:+|} "$1"); isNeedEval=t; shift;;
@@ -139,7 +140,7 @@ printCacheStatistics()
 	printf >&2 '%s: %d line%s, %d cache hit%s (%d%%).\n' "$scriptName" "$lineCnt" "$lineCntPlural" "$cacheHits" "$cacheHitsPlural" "$((cacheHits * 100 / lineCnt))"
     fi
 }
-[ "$isVerbose" ] && trap printCacheStatistics EXIT
+[ ${#onExit[@]} -eq 0 ] || trap 'for exitTrap in "${onExit[@]}"; do $exitTrap; done' EXIT
 
 getValidCachedResult()
 {
@@ -222,6 +223,15 @@ manageCacheSize()
     fi
 }
 
+readCache()
+{
+    :
+}
+writeCache()
+{
+    :
+}
+
 transform()
 {
     if [ "$isNeedEval" ]; then
@@ -233,6 +243,7 @@ transform()
 
 typeset -A cache=()
 typeset -A cacheTimestamps=()
+[ ! "$isPersist" ] || readCache || exit $?
 let lineCnt=0 cacheHits=0
 isEOL=t
 while IFS=$'\n' read -r line || { isEOL=; [ -n "$line" ]; }
