@@ -7,7 +7,7 @@ argMarker="$MEMOIZELINES_ARG_MARKER"; unset MEMOIZELINES_ARG_MARKER
 
 printShortUsage()
 {
-    printf 'Usage: cat SOURCE-FILE [...] | %q %s\n' "$(basename "$1")" '[-v|--verbose [-v|--verbose]] [-s|--size N] [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH] [-d|--drop-on N] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+    printf 'Usage: cat SOURCE-FILE [...] | %q %s\n' "$(basename "$1")" '[-v|--verbose [-v|--verbose]] [-s|--size N] [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH] [-w|--persist NAME [-i|--id ID]] [-d|--drop-on N] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
 }
 printUsage()
 {
@@ -45,6 +45,11 @@ HELPDESCRIPTION
 			days.
     --timestamp|-T EPOCH
 			Use EPOCH instead of the current time.
+    --persist|-w	Keep the memoizations across invocations. A previous
+			cache is read on startup, and the cache is written back
+			when there's no more input to process.
+    --id|-i ID		Identifier for the persisted cache. If omitted, a hash
+			derived from COMMANDs is used.
     --drop-on|-d N	Don't do any output if COMMAND exits with N, don't
 			abort, and continue processing as if the input line had
 			never occurred.
@@ -70,6 +75,8 @@ isVerbose=
 isVeryVerbose=
 size=
 validity=
+isPersist=
+id=
 dropOn=
 isNeedEval=
 now=
@@ -93,6 +100,8 @@ do
 			SECONDS="$(date +%s)" || exit 3
 			;;
 	--timestamp|-T)	shift; now="$1"; shift;;
+	--persist|-w)	shift; isPersist=t;;
+	--id|-i)	shift; id="$1"; shift;;
 	--drop-on|-d)	shift; dropOn="$1"; shift;;
 	--command|-c)	shift; commands+=(${commands:+|} "$1"); isNeedEval=t; shift;;
 	--)		shift; break;;
