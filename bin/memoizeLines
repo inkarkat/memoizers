@@ -118,6 +118,7 @@ if [ ${#commands[@]} -eq 0 ]; then
     exit 2
 fi >&2
 
+readonly DROP_VALUE=$'\n'   # Special value signalling that the input line should be dropped. This will never be parsed from COMMAND.
 readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
 printCacheStatistics()
 {
@@ -247,8 +248,12 @@ do
 	    fi
 	)" || {
 	    status=$?
-	    [ ! "$isVeryVerbose" ] || printf >&2 '%s: Transformation failed for "%s" (%d)\n' "$scriptName" "$line" "$status"
-	    exit $status
+	    if [ -n "$dropOn" ] && [ $status -eq $dropOn ]; then
+		result="$DROP_VALUE"
+	    else
+		[ ! "$isVeryVerbose" ] || printf >&2 '%s: Transformation failed for "%s" (%d)\n' "$scriptName" "$line" "$status"
+		exit $status
+	    fi
 	}
 
 	if [ "$size" != 0 ]; then
@@ -258,6 +263,10 @@ do
 	fi
     fi
 
-    [ ! "$isVeryVerbose" ] || printf >&2 '%s: %s for "%s": %s\n' "$scriptName" "$cacheStatus" "$line" "$result"
-    printf "%s${isEOL:+$'\n'}" "$result"
+    if [ "$result" = "$DROP_VALUE" ]; then
+	[ ! "$isVeryVerbose" ] || printf >&2 '%s: %s for "%s" (dropped input line)\n' "$scriptName" "$cacheStatus" "$line"
+    else
+	[ ! "$isVeryVerbose" ] || printf >&2 '%s: %s for "%s": %s\n' "$scriptName" "$cacheStatus" "$line" "$result"
+	printf "%s${isEOL:+$'\n'}" "$result"
+    fi
 done
