@@ -140,12 +140,46 @@ getValidCachedResult()
     result="${cache["$key"]}"
 }
 
+typeset -a uses=()
+appendOrMoveUse()
+{
+    local key="${1:?}"; shift
+    local u; for u in "${!uses[@]}"
+    do
+	if [ "${uses["$u"]}" = "$key" ]; then
+	    unset uses["$u"]
+	    break
+	fi
+    done
+    uses+=("$key")
+}
+trackUsage()
+{
+    [ -n "$size" ] || return
+
+    local key="${1:?}"; shift
+
+    appendOrMoveUse "$key"
+}
+
 manageCacheSize()
 {
     [ -n "$size" ] || return
+
     if [ $size -eq 1 ]; then
 	cache=()
 	cacheTimestamps=()
+    else
+	while [ ${#uses[@]} -gt $size ]
+	do
+	    uses=("${uses[@]}")
+	    local evictedKey="${uses[*]:0:1}"
+	    unset cache["$evictedKey"]
+	    unset cacheTimestamps["$evictedKey"]
+	    uses=("${uses[@]:1}")
+
+	    [ ! "$isVeryVerbose" ] || printf >&2 '%s: Evicting "%s"\n' "$scriptName" "${evictedKey//$'\n'/}"
+	done
     fi
 }
 
@@ -166,6 +200,8 @@ while IFS=$'\n' read -r line || { isEOL=; [ -n "$line" ]; }
 do
     let lineCnt+=1
     lineKey="${line:-$'\n'}"	# Empty key is not allowed in associative array; use newline instead, as it cannot occur in the input.
+    trackUsage "$lineKey"
+
     cacheStatus='Cache miss'
     if getValidCachedResult "$lineKey"; then
 	let cacheHits+=1
