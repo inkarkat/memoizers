@@ -34,7 +34,9 @@ HELPDESCRIPTION
     --verbose|-v	Print cache hit statistics at the end. When given twice,
 			also print information about each line's state.
     --size|-s N		Hold a maximum of N previous line transformations in the
-			cache. Least recently used ones will be evicted.
+			cache. Least recently used ones will be evicted. A size
+			of 0 completely disables memoization, so each line will
+			cause a transformation.
     --timeout|-t|--for VALID-TIMESPAN[SUFFIX]
 			If the last transformation of a line is older, execute
 			COMMAND to transform the line. VALID-TIMESPAN is
@@ -222,9 +224,11 @@ do
 	    exit $status
 	}
 
-	manageCacheSize
-	cache["$lineKey"]="$result"
-	[ -z "$validity" ] || cacheTimestamps["$lineKey"]=${now:-$SECONDS}
+	if [ "$size" != 0 ]; then
+	    manageCacheSize
+	    cache["$lineKey"]="$result"
+	    [ -z "$validity" ] || cacheTimestamps["$lineKey"]=${now:-$SECONDS}
+	fi
     fi
 
     [ ! "$isVeryVerbose" ] || printf >&2 '%s: %s for "%s": %s\n' "$scriptName" "$cacheStatus" "$line" "$result"
