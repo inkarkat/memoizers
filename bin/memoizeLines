@@ -143,7 +143,7 @@ getValidCachedResult()
 }
 
 typeset -a uses=()
-appendOrMoveUse()
+deleteUse()
 {
     local key="${1:?}"; shift
     local u; for u in "${!uses[@]}"
@@ -153,6 +153,11 @@ appendOrMoveUse()
 	    break
 	fi
     done
+}
+appendOrMoveUse()
+{
+    local key="${1:?}"; shift
+    deleteUse "$key"
     uses+=("$key")
 }
 trackUsage()
