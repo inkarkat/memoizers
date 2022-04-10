@@ -1,0 +1,182 @@
+#!/bin/bash
+set -o pipefail
+shopt -qs extglob
+
+: ${MEMOIZELINES_ARG_MARKER='{}'}
+argMarker="$MEMOIZELINES_ARG_MARKER"; unset MEMOIZELINES_ARG_MARKER
+
+printShortUsage()
+{
+    printf 'Usage: cat SOURCE-FILE [...] | %q %s\n' "$(basename "$1")" '[-v|--verbose [-v|--verbose]] [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+}
+printUsage()
+{
+    # This is the short help when launched with no or incorrect arguments.
+    # It is printed to stderr to avoid accidental processing.
+    printShortUsage "$1" >&2
+    printf >&2 '\nTry %q --help for more information.\n' "$(basename "$1")"
+}
+printLongUsage()
+{
+    # This is the long "man page" when launched with the help argument.
+    # It is printed to stdout to allow paging with 'more'.
+    cat <<HELPDESCRIPTION
+Read lines from standard input; if a line has not yet been seen or its last
+processing is older than VALID-TIMESPAN, transform it through COMMAND, return
+its output, and store that output for future occurences of that line (which will
+then bypass the transformation through COMMAND and directly return the stored
+output again).
+HELPDESCRIPTION
+    echo
+    printShortUsage "$1"
+    echo
+    cat <<HELPTEXT
+    --verbose|-v	Print cache hit statistics at the end. When given twice,
+			also print information about each line's state.
+    --timeout|-t|--for VALID-TIMESPAN[SUFFIX]
+			If the last transformation of a line is older, execute
+			COMMAND to transform the line. VALID-TIMESPAN is
+			NUMBER[SUFFIX], where SUFFIX may be 's' for seconds (the
+			default), 'm' for minutes, 'h' for hours or 'd' for
+			days.
+    --timestamp|-T EPOCH
+			Use EPOCH instead of the current time.
+    --command|-c CMD	The command line to be executed to transform a line;
+			${argMarker:+inside CMD, $argMarker is replaced with the line. Else,}
+			the input is passed via standard input. The transformed
+			line is read from standard output.
+			When this is a simple command, it can also be passed as
+			such.
+EXIT STATUS:
+    0	Lines either existed (and are recent enough), or had to be updated and
+	that succeeded.
+    2	Bad invocation, wrong or missing command-line arguments.
+    3	Internal error or failed assertion.
+    *	Any error from COMMAND is returned as-is.
+
+Example:
+HELPTEXT
+printf '%s | %q %s\n' "repeat -n 10 -c 'echo \$((RANDOM %6))'" "$(basename "$1")" "-c 'printf \"%s: \" {}; date'"
+}
+
+isVerbose=
+isVeryVerbose=
+validity=
+isNeedEval=
+now=
+typeset -a commands=()
+while [ $# -ne 0 ]
+do
+    case "$1" in
+	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
+	--verbose|-v)	shift; [ "$isVerbose" ] && isVeryVerbose=t; isVerbose=t;;
+	--timeout|-t|--for)
+			shift
+			case "$1" in
+			    +([0-9])?(s))   validity="${1%s}";;
+			    +([0-9])m)	    validity=$((${1%m} * 60));;
+			    +([0-9])h)	    validity=$((${1%h} * 3600));;
+			    +([0-9])d)	    validity=$((${1%d} * 86400));;
+			    *)		    printf >&2 'ERROR: Illegal timespan: %s\n' "$1"; exit 2;;
+			esac
+			shift
+			SECONDS="$(date +%s)" || exit 3
+			;;
+	--timestamp|-T)	shift; now="$1"; shift;;
+	--command|-c)	shift; commands+=(${commands:+|} "$1"); isNeedEval=t; shift;;
+	--)		shift; break;;
+	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
+	*)		break;;
+    esac
+done
+if [ $# -ne 0 ]; then
+    if [ "$isNeedEval" ]; then
+	# Combine --command and SIMPLECOMMAND; need to quote SIMPLECOMMAND to
+	# undo the effects of eval.
+	printf -v quotedSimpleCommand '%q ' "$@"
+	printf -v escapedFileMarker %q "$argMarker"
+	commands+=(${commands:+|} "${quotedSimpleCommand//"$escapedFileMarker"/$argMarker}")	# %q escapes {}, we don't want that to have it interpolated later.
+    else
+	commands=("$@")
+    fi
+fi
+if [ ${#commands[@]} -eq 0 ]; then
+    echo 'ERROR: No COMMAND(s) specified; need to pass -c|--command "COMMANDLINE", or SIMPLECOMMAND.'
+    echo
+    printUsage "$0"
+    exit 2
+fi >&2
+
+readonly scriptName="$(basename -- "${BASH_SOURCE[0]}")"
+printCacheStatistics()
+{
+    if [ $lineCnt -eq 0 ]; then
+	printf >&2 '%s: No lines.\n' "$scriptName"
+    else
+	lineCntPlural=s; [ $lineCnt -eq 1 ] && lineCntPlural=
+	cacheHitsPlural=s; [ $cacheHits -eq 1 ] && cacheHitsPlural=
+	printf >&2 '%s: %d line%s, %d cache hit%s (%d%%).\n' "$scriptName" "$lineCnt" "$lineCntPlural" "$cacheHits" "$cacheHitsPlural" "$((cacheHits * 100 / lineCnt))"
+    fi
+}
+[ "$isVerbose" ] && trap printCacheStatistics EXIT
+
+getValidCachedResult()
+{
+    local key="${1:?}"; shift
+    [ -n "${cache["$key"]+t}" ] || return 1
+
+    if [ -n "$validity" ]; then
+	local cacheTime="${cacheTimestamps["$key"]}"
+	if [ $((${now:-$SECONDS} - cacheTime)) -gt $validity ]; then
+	    cacheStatus='Outdated cache entry'
+	    return 1
+	fi
+    fi
+
+    result="${cache["$key"]}"
+}
+
+transform()
+{
+    if [ "$isNeedEval" ]; then
+	eval "${interpolatedCommands[@]}"
+    else
+	"${interpolatedCommands[@]}"
+    fi
+}
+
+typeset -A cache=()
+typeset -A cacheTimestamps=()
+let lineCnt=0 cacheHits=0
+isEOL=t
+while IFS=$'\n' read -r line || { isEOL=; [ -n "$line" ]; }
+do
+    let lineCnt+=1
+    lineKey="${line:-$'\n'}"	# Empty key is not allowed in associative array; use newline instead, as it cannot occur in the input.
+    cacheStatus='Cache miss'
+    if getValidCachedResult "$lineKey"; then
+	let cacheHits+=1
+	cacheStatus='Cache hit'
+    else
+	lineArg="$line"
+	[ "$isNeedEval" ] && printf -v lineArg '%q' "$lineArg"
+	typeset -a interpolatedCommands=("${commands[@]//"$argMarker"/$lineArg}")
+	result="$(
+	    if [ "${interpolatedCommands[*]}" = "${commands[*]}" ]; then
+		printf '%s\n' "$line" | transform
+	    else
+		transform
+	    fi
+	)" || {
+	    status=$?
+	    [ ! "$isVeryVerbose" ] || printf >&2 '%s: Transformation failed for "%s" (%d)\n' "$scriptName" "$line" "$status"
+	    exit $status
+	}
+
+	cache["$lineKey"]="$result"
+	[ -z "$validity" ] || cacheTimestamps["$lineKey"]=${now:-$SECONDS}
+    fi
+
+    [ ! "$isVeryVerbose" ] || printf >&2 '%s: %s for "%s": %s\n' "$scriptName" "$cacheStatus" "$line" "$result"
+    printf "%s${isEOL:+$'\n'}" "$result"
+done
