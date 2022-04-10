@@ -7,7 +7,7 @@ argMarker="$MEMOIZELINES_ARG_MARKER"; unset MEMOIZELINES_ARG_MARKER
 
 printShortUsage()
 {
-    printf 'Usage: cat SOURCE-FILE [...] | %q %s\n' "$(basename "$1")" '[-v|--verbose [-v|--verbose]] [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+    printf 'Usage: cat SOURCE-FILE [...] | %q %s\n' "$(basename "$1")" '[-v|--verbose [-v|--verbose]] [-s|--size N] [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
 }
 printUsage()
 {
@@ -33,6 +33,10 @@ HELPDESCRIPTION
     cat <<HELPTEXT
     --verbose|-v	Print cache hit statistics at the end. When given twice,
 			also print information about each line's state.
+    --size|-s N		Hold a maximum of N previous line transformations in the
+			cache. Least recently used ones will be evicted. A size
+			of 0 completely disables memoization, so each line will
+			cause a transformation.
     --timeout|-t|--for VALID-TIMESPAN[SUFFIX]
 			If the last transformation of a line is older, execute
 			COMMAND to transform the line. VALID-TIMESPAN is
@@ -61,6 +65,7 @@ printf '%s | %q %s\n' "repeat -n 10 -c 'echo \$((RANDOM %6))'" "$(basename "$1")
 
 isVerbose=
 isVeryVerbose=
+size=
 validity=
 isNeedEval=
 now=
@@ -70,6 +75,7 @@ do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--verbose|-v)	shift; [ "$isVerbose" ] && isVeryVerbose=t; isVerbose=t;;
+	--size|-s)	shift; size="$1"; shift;;
 	--timeout|-t|--for)
 			shift
 			case "$1" in
@@ -136,6 +142,71 @@ getValidCachedResult()
     result="${cache["$key"]}"
 }
 
+clearOutdated()
+{
+    local key; for key in "${!cacheTimestamps[@]}"
+    do
+	local cacheTime="${cacheTimestamps["$key"]}"
+	if [ $((${now:-$SECONDS} - cacheTime)) -gt $validity ]; then
+	    unset cache["$key"] cacheTimestamps["$key"]
+	    deleteUse "$key"
+	    [ ! "$isVeryVerbose" ] || printf >&2 '%s: Evicting outdated "%s"\n' "$scriptName" "${key//$'\n'/}"
+	fi
+    done
+}
+
+typeset -a uses=()
+deleteUse()
+{
+    local key="${1:?}"; shift
+    local u; for u in "${!uses[@]}"
+    do
+	if [ "${uses["$u"]}" = "$key" ]; then
+	    unset uses["$u"]
+	    break
+	fi
+    done
+}
+appendOrMoveUse()
+{
+    local key="${1:?}"; shift
+    deleteUse "$key"
+    uses+=("$key")
+}
+trackUsage()
+{
+    [ -n "$size" ] || return
+
+    local key="${1:?}"; shift
+
+    appendOrMoveUse "$key"
+}
+
+manageCacheSize()
+{
+    [ -n "$size" ] || return
+
+    if [ $size -eq 1 ]; then
+	cache=()
+	cacheTimestamps=()
+    else
+	if [ -n "$validity" -a ${#uses[@]} -gt $size ]; then
+	    # Remove expired cache entries before evicting still valid ones.
+	    clearOutdated
+	fi
+
+	while [ ${#uses[@]} -gt $size ]
+	do
+	    uses=("${uses[@]}")
+	    local evictedKey="${uses[*]:0:1}"
+	    unset cache["$evictedKey"] cacheTimestamps["$evictedKey"]
+	    uses=("${uses[@]:1}")
+
+	    [ ! "$isVeryVerbose" ] || printf >&2 '%s: Evicting "%s"\n' "$scriptName" "${evictedKey//$'\n'/}"
+	done
+    fi
+}
+
 transform()
 {
     if [ "$isNeedEval" ]; then
@@ -153,6 +224,8 @@ while IFS=$'\n' read -r line || { isEOL=; [ -n "$line" ]; }
 do
     let lineCnt+=1
     lineKey="${line:-$'\n'}"	# Empty key is not allowed in associative array; use newline instead, as it cannot occur in the input.
+    trackUsage "$lineKey"
+
     cacheStatus='Cache miss'
     if getValidCachedResult "$lineKey"; then
 	let cacheHits+=1
@@ -173,8 +246,11 @@ do
 	    exit $status
 	}
 
-	cache["$lineKey"]="$result"
-	[ -z "$validity" ] || cacheTimestamps["$lineKey"]=${now:-$SECONDS}
+	if [ "$size" != 0 ]; then
+	    manageCacheSize
+	    cache["$lineKey"]="$result"
+	    [ -z "$validity" ] || cacheTimestamps["$lineKey"]=${now:-$SECONDS}
+	fi
     fi
 
     [ ! "$isVeryVerbose" ] || printf >&2 '%s: %s for "%s": %s\n' "$scriptName" "$cacheStatus" "$line" "$result"
