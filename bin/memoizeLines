@@ -223,13 +223,41 @@ manageCacheSize()
     fi
 }
 
+getCacheFilespec()
+{
+    local -r CACHE_DIRSPEC="${XDG_CACHE_HOME:-${HOME}/.cache}/${scriptName}"
+    [ -d "$CACHE_DIRSPEC" ] || mkdir -p -- "$CACHE_DIRSPEC" || { printf >&2 'ERROR: Could not initialize cache store at %s!\n' "$CACHE_DIRSPEC"; return 3; }
+
+    [ -n "$id" ] || id="$(printf %s "${commands[*]}" | sha256sum - | cut --delimiter ' ' --fields 1)" || return $?
+
+    printf '%s/%s\n' "$CACHE_DIRSPEC" "$id"
+}
 readCache()
 {
-    :
+    local cacheFilespec; cacheFilespec="$(getCacheFilespec)" || return $?
+    if [ -r "$cacheFilespec" ]; then
+	source "$cacheFilespec" || return $?
+
+	[ -z "$size" -o "$size" = 0 ] || manageCacheSize
+    fi
+
+    if [ "$isVerbose" ]; then
+	if [ ${#cache[@]} -eq 0 ]; then
+	    printf >&2 '%s: Starting with empty cache.\n' "$scriptName"
+	else
+	    cachePlural=s; [ ${#cache[@]} -eq 1 ] && cachePlural=
+	    printf >&2 '%s: Starting with %d cached input line%s\n' "$scriptName" "${#cache[@]}" "$cachePlural"
+	fi
+    fi
 }
 writeCache()
 {
-    :
+    local cacheFilespec; cacheFilespec="$(getCacheFilespec)" || return $?
+    {
+	typeset -p cache
+	[ -z "$validity" ] || typeset -p cacheTimestamps
+	[ -z "$size" -o "$size" = 0 ] || typeset -p uses
+    } | sed -e 's#^declare #&-g #' > "$cacheFilespec"	# The sourcing is done inside a function, so "declare -g" must be used to define the variables with global scope.
 }
 
 transform()

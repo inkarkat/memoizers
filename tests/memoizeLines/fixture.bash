@@ -2,9 +2,17 @@
 
 export RECORD="${BATS_TMPDIR}/record"
 
-setup()
+clean_recorder()
 {
     rm -f -- "$RECORD"
+    }
+fixtureSetup()
+{
+    clean_recorder
+}
+setup()
+{
+    fixtureSetup
 }
 
 dump_input()
