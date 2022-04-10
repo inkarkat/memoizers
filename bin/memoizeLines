@@ -142,6 +142,19 @@ getValidCachedResult()
     result="${cache["$key"]}"
 }
 
+clearOutdated()
+{
+    local key; for key in "${!cacheTimestamps[@]}"
+    do
+	local cacheTime="${cacheTimestamps["$key"]}"
+	if [ $((${now:-$SECONDS} - cacheTime)) -gt $validity ]; then
+	    unset cache["$key"] cacheTimestamps["$key"]
+	    deleteUse "$key"
+	    [ ! "$isVeryVerbose" ] || printf >&2 '%s: Evicting outdated "%s"\n' "$scriptName" "${key//$'\n'/}"
+	fi
+    done
+}
+
 typeset -a uses=()
 deleteUse()
 {
@@ -177,6 +190,11 @@ manageCacheSize()
 	cache=()
 	cacheTimestamps=()
     else
+	if [ -n "$validity" -a ${#uses[@]} -gt $size ]; then
+	    # Remove expired cache entries before evicting still valid ones.
+	    clearOutdated
+	fi
+
 	while [ ${#uses[@]} -gt $size ]
 	do
 	    uses=("${uses[@]}")
