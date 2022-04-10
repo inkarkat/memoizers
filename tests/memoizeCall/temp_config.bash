@@ -27,5 +27,5 @@ assert_last()
 
 dump_config()
 {
-    sed >&3 -e 's/^/#/' -- "${XDG_DATA_HOME}/memoizeCall"
+    prefix '#' "${XDG_DATA_HOME}/memoizeCall" >&3
 }
