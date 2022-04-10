@@ -7,7 +7,7 @@ argMarker="$MEMOIZELINES_ARG_MARKER"; unset MEMOIZELINES_ARG_MARKER
 
 printShortUsage()
 {
-    printf 'Usage: cat SOURCE-FILE [...] | %q %s\n' "$(basename "$1")" '[-v|--verbose [-v|--verbose]] [-s|--size N] [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+    printf 'Usage: cat SOURCE-FILE [...] | %q %s\n' "$(basename "$1")" '[-v|--verbose [-v|--verbose]] [-s|--size N] [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH] [-d|--drop-on N] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
 }
 printUsage()
 {
@@ -45,6 +45,9 @@ HELPDESCRIPTION
 			days.
     --timestamp|-T EPOCH
 			Use EPOCH instead of the current time.
+    --drop-on|-d N	Don't do any output if COMMAND exits with N, don't
+			abort, and continue processing as if the input line had
+			never occurred.
     --command|-c CMD	The command line to be executed to transform a line;
 			${argMarker:+inside CMD, $argMarker is replaced with the line. Else,}
 			the input is passed via standard input. The transformed
@@ -67,6 +70,7 @@ isVerbose=
 isVeryVerbose=
 size=
 validity=
+dropOn=
 isNeedEval=
 now=
 typeset -a commands=()
@@ -89,6 +93,7 @@ do
 			SECONDS="$(date +%s)" || exit 3
 			;;
 	--timestamp|-T)	shift; now="$1"; shift;;
+	--drop-on|-d)	shift; dropOn="$1"; shift;;
 	--command|-c)	shift; commands+=(${commands:+|} "$1"); isNeedEval=t; shift;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
