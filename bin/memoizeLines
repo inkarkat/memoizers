@@ -140,6 +140,15 @@ getValidCachedResult()
     result="${cache["$key"]}"
 }
 
+manageCacheSize()
+{
+    [ -n "$size" ] || return
+    if [ $size -eq 1 ]; then
+	cache=()
+	cacheTimestamps=()
+    fi
+}
+
 transform()
 {
     if [ "$isNeedEval" ]; then
@@ -177,6 +186,7 @@ do
 	    exit $status
 	}
 
+	manageCacheSize
 	cache["$lineKey"]="$result"
 	[ -z "$validity" ] || cacheTimestamps["$lineKey"]=${now:-$SECONDS}
     fi
