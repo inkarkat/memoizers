@@ -181,8 +181,7 @@ manageCacheSize()
 	do
 	    uses=("${uses[@]}")
 	    local evictedKey="${uses[*]:0:1}"
-	    unset cache["$evictedKey"]
-	    unset cacheTimestamps["$evictedKey"]
+	    unset cache["$evictedKey"] cacheTimestamps["$evictedKey"]
 	    uses=("${uses[@]:1}")
 
 	    [ ! "$isVeryVerbose" ] || printf >&2 '%s: Evicting "%s"\n' "$scriptName" "${evictedKey//$'\n'/}"
