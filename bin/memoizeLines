@@ -228,7 +228,7 @@ getCacheFilespec()
     local -r CACHE_DIRSPEC="${XDG_CACHE_HOME:-${HOME}/.cache}/${scriptName}"
     [ -d "$CACHE_DIRSPEC" ] || mkdir -p -- "$CACHE_DIRSPEC" || { printf >&2 'ERROR: Could not initialize cache store at %s!\n' "$CACHE_DIRSPEC"; return 3; }
 
-    [ -n "$id" ] || id="$(printf %s "${commands[*]}" | sha256sum - | cut --delimiter ' ' --fields 1)" || return $?
+    [ -n "$id" ] || id="$(stringAsFilename "${commands[*]}")" || return $?
 
     printf '%s/%s\n' "$CACHE_DIRSPEC" "$id"
 }
