@@ -10,7 +10,7 @@ printShortUsage()
 
     printf 'Usage: cat SOURCE-FILE [...] | %q %s\n' "$(basename "$1")" "$commonArgs"
     echo
-    printf 'Usage: %q %s %s\n' "$(basename "$1")" "$commonArgs" '[-r|--redirect] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+    printf 'Usage: %q %s %s\n' "$(basename "$1")" "$commonArgs" '[-r|--redirect] [--tee] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
 }
 printUsage()
 {
@@ -43,6 +43,10 @@ HELPDESCRIPTION
 			(if the command succeeds). Saves you from including the
 			redirection in COMMANDLINE and makes it possible to use
 			SIMPLECOMMAND.
+    --tee		Also output the input / the updated FILE contents.
+			This saves you from reading the FILE yourself (and may
+			get you latest standard input not yet memoized in the
+			FILE).
     --timestamp|-T EPOCH
 			Use EPOCH instead of the current time.
     --command|-c CMD	The command line to be executed to update the FILE (as a
@@ -63,6 +67,8 @@ HELPTEXT
     printf '%q %s\n' "$(basename "$1")" '--file ~/.cache/blogfeed --for 1d -- wget https://ingo-karkat.de/blog/feed -o ~/.cache/blogfeed'
 }
 
+isTee=
+teeContents() { :; }
 isVerbose=
 file=
 validity=
@@ -88,6 +94,7 @@ do
 			shift
 			;;
 	--redirect|-r)	shift; isRedirect=t;;
+	--tee)		shift; isTee=t; teeContents() { cat -- "${1:?}" || exit 3; };;
 	--timestamp|-T)	shift; now="$1"; shift;;
 	--command|-c)	shift; commands+=(${commands:+;} "$1"); isNeedEval=t; shift;;
 	--)		shift; break;;
@@ -152,13 +159,22 @@ else
 fi
 
 if [ ${#commands[@]} -eq 0 ]; then
-    [ "$needsUpdate" ] || exec cat >/dev/null 2>&1
+    if [ ! "$needsUpdate" ]; then
+	if [ "$isTee" ]; then
+	    exec cat
+	else
+	    exec cat >/dev/null 2>&1
+	fi
+    fi
 
     isNeedEval=t
     commands=('cat > "$file"')
     isRedirect=''   # Not needed when reading from standard input; silently ignore instead of complaining.
 fi
-[ "$needsUpdate" ] || exit 0
+if [ ! "$needsUpdate" ]; then
+    teeContents "$file"
+    exit 0
+fi
 
 
 if [ "$isRedirect" ]; then
@@ -169,10 +185,18 @@ if [ "$isRedirect" ]; then
     }
     [ "${DEBUG:-}" ] || trap 'cleanup' EXIT
 
-    update > "$TMPFILE" || exit $?
-    cp --force -- "$TMPFILE" "$file" || exit 3
+    update > "$TMPFILE"; status=$?
+    if [ $status -eq 0 ]; then
+	teeContents "$TMPFILE"
+	cp --force -- "$TMPFILE" "$file" || exit 3
+    else
+	teeContents "$file"
+	exit $status
+    fi
 else
-    update || exit $?
+    update; status=$?
+    teeContents "$file"
+    [ $status -eq 0 ] || exit $status
 
     if [ ! -e "$file" ] || [ "$fileModificationEpoch" -eq "$(getModificationEpoch "$file")" ]; then
 	# FILE was not created / updated as a side effect of COMMAND.
