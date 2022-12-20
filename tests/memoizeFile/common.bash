@@ -32,3 +32,13 @@ assert_not_updated()
 {
     ! grep -q '^update' "$FILE"
 }
+
+inputWrapper()
+{
+    local input="$1"; shift
+    printf "%s${input:+\n}" "$input" | "$@"
+}
+runWithInput()
+{
+    run inputWrapper "$@"
+}
