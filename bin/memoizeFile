@@ -139,8 +139,8 @@ getModificationEpoch()
 needsUpdate=
 fileModificationEpoch=-1
 if [ -e "$file" ]; then
-    if [ "$validity" ]; then
-	[ "$now" ] || now="$(date +%s)" || exit 3
+    if [ -n "$validity" ]; then
+	[ -n "$now" ] || now="$(date +%s)" || exit 3
 	fileModificationEpoch="$(getModificationEpoch "$file")" || exit 3
 
 	[ $((fileModificationEpoch + validity)) -ge "$now" ] || needsUpdate=t
