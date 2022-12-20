@@ -9,12 +9,12 @@ load common
     assert_updates 1
     [[ "$output" =~ /file\ needs\ an\ update\;\ last\ update\ was\ 86400\ second\(s\)\ ago\.$ ]]
 
-    sleep 0.9
+    sleep 0.8
     run memoizeFile --verbose --for 1 --file "$FILE" --command 'echo updated with $RANDOM >> {}'
     assert_updates 1
     [[ "$output" =~ /file\ does\ not\ need\ an\ update\ yet\;\ last\ update\ was\ 1\ second\(s\)\ ago\.$ ]]
 
-    sleep 1.1
+    sleep 1.2
     run memoizeFile --verbose --for 1 --file "$FILE" --command 'echo updated with $RANDOM >> {}'
     assert_updates 2
     [[ "$output" =~ /file\ needs\ an\ update\;\ last\ update\ was\ 2\ second\(s\)\ ago\.$ ]]
