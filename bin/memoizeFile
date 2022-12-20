@@ -37,8 +37,9 @@ HELPDESCRIPTION
 			If the last modification of FILE is older, execute
 			COMMAND to update the FILE. VALID-TIMESPAN is
 			NUMBER[SUFFIX], where SUFFIX may be 's' for seconds (the
-			default), 'm' for minutes, 'h' for hours or 'd' for
-			days.
+			default), 'm' for minutes, 'h' for hours, 'd' for days,
+			'w' for weeks, 'mo' for months, 'y' for years, 'g' for
+			generations.
     --redirect|-r	Directly redirect standard output of COMMAND into FILE
 			(if the command succeeds). Saves you from including the
 			redirection in COMMANDLINE and makes it possible to use
@@ -89,6 +90,10 @@ do
 			    +([0-9])m)	    validity=$((${1%m} * 60));;
 			    +([0-9])h)	    validity=$((${1%h} * 3600));;
 			    +([0-9])d)	    validity=$((${1%d} * 86400));;
+			    +([0-9])w)	    validity=$((${1%w} * 86400 * 7));;
+			    +([0-9])mo)	    validity=$((${1%mo} * 86400 * 30));;
+			    +([0-9])y)	    validity=$((${1%y} * 86400 * 365));;
+			    +([0-9])g)	    validity=$((${1%g} * 86400 * 9131));;
 			    *)		    printf >&2 'ERROR: Illegal timespan: %s\n' "$1"; exit 2;;
 			esac
 			shift
