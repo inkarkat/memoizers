@@ -78,7 +78,6 @@ validity=
 isPersist=
 id=
 dropOn=
-isNeedEval=
 now=
 typeset -a commands=()
 typeset -a onExit=()
@@ -104,22 +103,18 @@ do
 	--persist|-w)	shift; isPersist=t; onExit+=(writeCache);;
 	--id|-i)	shift; id="$1"; shift;;
 	--drop-on|-d)	shift; dropOn="$1"; shift;;
-	--command|-c)	shift; commands+=(${commands:+|} "$1"); isNeedEval=t; shift;;
+	--command|-c)	shift; commands+=(${commands:+|} "$1"); shift;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
     esac
 done
 if [ $# -ne 0 ]; then
-    if [ "$isNeedEval" ]; then
-	# Combine --command and SIMPLECOMMAND; need to quote SIMPLECOMMAND to
-	# undo the effects of eval.
-	printf -v quotedSimpleCommand '%q ' "$@"
-	printf -v escapedFileMarker %q "$argMarker"
-	commands+=(${commands:+|} "${quotedSimpleCommand//"$escapedFileMarker"/$argMarker}")	# %q escapes {}, we don't want that to have it interpolated later.
-    else
-	commands=("$@")
-    fi
+    # Combine --command and SIMPLECOMMAND; need to quote SIMPLECOMMAND to
+    # undo the effects of eval.
+    printf -v quotedSimpleCommand '%q ' "$@"
+    printf -v escapedFileMarker %q "$argMarker"
+    commands+=(${commands:+|} "${quotedSimpleCommand//"$escapedFileMarker"/$argMarker}")	# %q escapes {}, we don't want that to have it interpolated later.
 fi
 if [ ${#commands[@]} -eq 0 ]; then
     echo 'ERROR: No COMMAND(s) specified; need to pass -c|--command "COMMANDLINE", or SIMPLECOMMAND.'
@@ -262,11 +257,7 @@ writeCache()
 
 transform()
 {
-    if [ "$isNeedEval" ]; then
-	eval "${interpolatedCommands[@]}"
-    else
-	"${interpolatedCommands[@]}"
-    fi
+    eval "${interpolatedCommands[@]}"
 }
 
 typeset -A cache=()
@@ -286,7 +277,7 @@ do
 	cacheStatus='Cache hit'
     else
 	lineArg="$line"
-	[ "$isNeedEval" ] && printf -v lineArg '%q' "$lineArg"
+	printf -v lineArg '%q' "$lineArg"
 	typeset -a interpolatedCommands=("${commands[@]//"$argMarker"/$lineArg}")
 	result="$(
 	    if [ "${interpolatedCommands[*]}" = "${commands[*]}" ]; then

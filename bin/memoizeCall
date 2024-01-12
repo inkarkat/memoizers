@@ -22,7 +22,6 @@ validity=
 isSuccessfulOnly=
 group=
 subject=
-isNeedEval=
 typeset -a commands=()
 isFromStandardIn=
 typeset -a executionMarkerArgs=()
@@ -35,21 +34,17 @@ do
 	--successful-only)	shift; isSuccessfulOnly=t;;
 	--memoize-group|-g)	shift; group="$1"; shift;;
 	--subject|-s)		shift; subject="$1"; shift;;
-	--command|-c)		shift; commands+=(${commands:+;} "$1"); isNeedEval=t; shift;;
+	--command|-c)		shift; commands+=(${commands:+;} "$1"); shift;;
 	--)			shift; break;;
 	-*)			{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)			break;;
     esac
 done
 if [ $# -ne 0 ]; then
-    if [ "$isNeedEval" ]; then
-	# Combine --command and SIMPLECOMMAND; need to quote SIMPLECOMMAND to
-	# undo the effects of eval.
-	printf -v quotedSimpleCommand '%q ' "$@"
-	commands+=(${commands:+;} "${quotedSimpleCommand% }")
-    else
-	commands=("$@")
-    fi
+    # Combine --command and SIMPLECOMMAND; need to quote SIMPLECOMMAND to
+    # undo the effects of eval.
+    printf -v quotedSimpleCommand '%q ' "$@"
+    commands+=(${commands:+;} "${quotedSimpleCommand% }")
 fi
 if [ ${#commands[@]} -eq 0 ]; then
     isFromStandardIn=t
@@ -84,10 +79,8 @@ fi
 output="$(
     if [ "$isFromStandardIn" ]; then
 	printf %s "${commands[@]}" | bash -
-    elif [ "$isNeedEval" ]; then
-	eval "${commands[@]}"
     else
-	"${commands[@]}"
+	eval "${commands[@]}"
     fi
 )"
 exitStatus=$?

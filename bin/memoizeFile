@@ -74,7 +74,6 @@ isVerbose=
 file=
 validity=
 isRedirect=
-isNeedEval=
 now=
 typeset -a commands=()
 while [ $# -ne 0 ]
@@ -101,22 +100,18 @@ do
 	--redirect|-r)	shift; isRedirect=t;;
 	--tee)		shift; isTee=t; teeContents() { cat -- "${1:?}" || exit 3; };;
 	--timestamp|-T)	shift; now="$1"; shift;;
-	--command|-c)	shift; commands+=(${commands:+;} "$1"); isNeedEval=t; shift;;
+	--command|-c)	shift; commands+=(${commands:+;} "$1"); shift;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
     esac
 done
 if [ $# -ne 0 ]; then
-    if [ "$isNeedEval" ]; then
-	# Combine --command and SIMPLECOMMAND; need to quote SIMPLECOMMAND to
-	# undo the effects of eval.
-	printf -v quotedSimpleCommand '%q ' "$@"
-	printf -v escapedFileMarker %q "$fileMarker"
-	commands+=(${commands:+;} "${quotedSimpleCommand//"$escapedFileMarker"/$fileMarker}")	# %q escapes {}, we don't want that to have it interpolated later.
-    else
-	commands=("$@")
-    fi
+    # Combine --command and SIMPLECOMMAND; need to quote SIMPLECOMMAND to
+    # undo the effects of eval.
+    printf -v quotedSimpleCommand '%q ' "$@"
+    printf -v escapedFileMarker %q "$fileMarker"
+    commands+=(${commands:+;} "${quotedSimpleCommand//"$escapedFileMarker"/$fileMarker}")	# %q escapes {}, we don't want that to have it interpolated later.
 fi
 if [ -z "$file" ]; then
     echo 'ERROR: No FILE passed.'
@@ -129,11 +124,7 @@ fi >&2
 update()
 {
     typeset -a interpolatedCommands=("${commands[@]//"$fileMarker"/$file}")
-    if [ "$isNeedEval" ]; then
-	eval "${interpolatedCommands[@]}"
-    else
-	"${interpolatedCommands[@]}"
-    fi
+    eval "${interpolatedCommands[@]}"
 }
 getModificationEpoch()
 {
@@ -172,7 +163,6 @@ if [ ${#commands[@]} -eq 0 ]; then
 	fi
     fi
 
-    isNeedEval=t
     commands=('cat > "$file"')
     isRedirect=''   # Not needed when reading from standard input; silently ignore instead of complaining.
 fi
