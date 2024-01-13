@@ -1,6 +1,8 @@
 #!/bin/bash
 shopt -qs extglob
 
+: ${MEMOIZECALL_COMMAND_JOINER=;}
+
 printUsage()
 {
     cat <<HELPTEXT
@@ -22,7 +24,7 @@ validity=
 isSuccessfulOnly=
 group=
 subject=
-typeset -a commands=()
+commands=
 isFromStandardIn=
 typeset -a executionMarkerArgs=()
 while [ $# -ne 0 ]
@@ -34,7 +36,7 @@ do
 	--successful-only)	shift; isSuccessfulOnly=t;;
 	--memoize-group|-g)	shift; group="$1"; shift;;
 	--subject|-s)		shift; subject="$1"; shift;;
-	--command|-c)		shift; commands+=(${commands:+;} "$1"); shift;;
+	--command|-c)		shift; commands+="${commands:+ $MEMOIZECALL_COMMAND_JOINER }$1"; shift;;
 	--)			shift; break;;
 	-*)			{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)			break;;
@@ -44,20 +46,20 @@ if [ $# -ne 0 ]; then
     # Combine --command and SIMPLECOMMAND; need to quote SIMPLECOMMAND to
     # undo the effects of eval.
     printf -v quotedSimpleCommand '%q ' "$@"
-    commands+=(${commands:+;} "${quotedSimpleCommand% }")
+    commands+="${commands:+ $MEMOIZECALL_COMMAND_JOINER }${quotedSimpleCommand% }"
 fi
-if [ ${#commands[@]} -eq 0 ]; then
+if [ -z "$commands" ]; then
     isFromStandardIn=t
-    commands=("$(< /dev/stdin)")
+    commands="$(< /dev/stdin)"
 fi
-if [ -z "${commands[*]}" ]; then
+if [ -z "$commands" ]; then
     echo >&2 'ERROR: No COMMAND.'
     echo >&2
     printUsage "$0" >&2
     exit 2
 fi
 
-[ "$subject" ] || subject="${commands[*]}"
+[ "$subject" ] || subject="$commands"
 if [ "$group" ]; then
     executionMarkerArgs+=(--namespace memoizeCall.d --group "$group")
 else
@@ -78,9 +80,9 @@ fi
 
 output="$(
     if [ "$isFromStandardIn" ]; then
-	printf %s "${commands[@]}" | bash -
+	printf %s "$commands" | bash -
     else
-	eval "${commands[@]}"
+	eval "$commands"
     fi
 )"
 exitStatus=$?

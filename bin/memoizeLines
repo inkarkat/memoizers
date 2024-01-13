@@ -2,6 +2,7 @@
 set -o pipefail
 shopt -qs extglob
 
+: ${MEMOIZELINES_COMMAND_JOINER=|}
 : ${MEMOIZELINES_ARG_MARKER='{}'}
 argMarker="$MEMOIZELINES_ARG_MARKER"; unset MEMOIZELINES_ARG_MARKER
 
@@ -79,7 +80,7 @@ isPersist=
 id=
 dropOn=
 now=
-typeset -a commands=()
+commands=
 typeset -a onExit=()
 while [ $# -ne 0 ]
 do
@@ -103,7 +104,7 @@ do
 	--persist|-w)	shift; isPersist=t; onExit+=(writeCache);;
 	--id|-i)	shift; id="$1"; shift;;
 	--drop-on|-d)	shift; dropOn="$1"; shift;;
-	--command|-c)	shift; commands+=(${commands:+|} "$1"); shift;;
+	--command|-c)	shift; commands+="${commands:+ $MEMOIZELINES_COMMAND_JOINER }$1"; shift;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
@@ -114,9 +115,9 @@ if [ $# -ne 0 ]; then
     # undo the effects of eval.
     printf -v quotedSimpleCommand '%q ' "$@"
     printf -v escapedFileMarker %q "$argMarker"
-    commands+=(${commands:+|} "${quotedSimpleCommand//"$escapedFileMarker"/$argMarker}")	# %q escapes {}, we don't want that to have it interpolated later.
+    commands+="${commands:+ $MEMOIZELINES_COMMAND_JOINER }${quotedSimpleCommand//"$escapedFileMarker"/$argMarker}"	# %q escapes {}, we don't want that to have it interpolated later.
 fi
-if [ ${#commands[@]} -eq 0 ]; then
+if [ -z "$commands" ]; then
     echo 'ERROR: No COMMAND(s) specified; need to pass -c|--command "COMMANDLINE", or SIMPLECOMMAND.'
     echo
     printUsage "$0"
@@ -223,7 +224,7 @@ getCacheFilespec()
     local -r CACHE_DIRSPEC="${XDG_CACHE_HOME:-${HOME}/.cache}/${scriptName}"
     [ -d "$CACHE_DIRSPEC" ] || mkdir -p -- "$CACHE_DIRSPEC" || { printf >&2 'ERROR: Could not initialize cache store at %s!\n' "$CACHE_DIRSPEC"; return 3; }
 
-    [ -n "$id" ] || id="$(stringAsFilename "${commands[*]}")" || return $?
+    [ -n "$id" ] || id="$(stringAsFilename "$commands")" || return $?
 
     printf '%s/%s\n' "$CACHE_DIRSPEC" "$id"
 }
@@ -257,7 +258,7 @@ writeCache()
 
 transform()
 {
-    eval "${interpolatedCommands[@]}"
+    eval "$interpolatedCommands"
 }
 
 typeset -A cache=()
@@ -278,9 +279,9 @@ do
     else
 	lineArg="$line"
 	printf -v lineArg '%q' "$lineArg"
-	typeset -a interpolatedCommands=("${commands[@]//"$argMarker"/$lineArg}")
+	interpolatedCommands="${commands//"$argMarker"/$lineArg}"
 	result="$(
-	    if [ "${interpolatedCommands[*]}" = "${commands[*]}" ]; then
+	    if [ "$interpolatedCommands" = "$commands" ]; then
 		printf '%s\n' "$line" | transform
 	    else
 		transform

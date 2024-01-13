@@ -1,6 +1,7 @@
 #!/bin/bash
 shopt -qs extglob
 
+: ${MEMOIZEFILE_COMMAND_JOINER=;}
 : ${MEMOIZEFILE_FILE_MARKER='{}'}
 fileMarker="$MEMOIZEFILE_FILE_MARKER"; unset MEMOIZEFILE_FILE_MARKER
 
@@ -75,7 +76,7 @@ file=
 validity=
 isRedirect=
 now=
-typeset -a commands=()
+commands=
 while [ $# -ne 0 ]
 do
     case "$1" in
@@ -100,7 +101,7 @@ do
 	--redirect|-r)	shift; isRedirect=t;;
 	--tee)		shift; isTee=t; teeContents() { cat -- "${1:?}" || exit 3; };;
 	--timestamp|-T)	shift; now="$1"; shift;;
-	--command|-c)	shift; commands+=(${commands:+;} "$1"); shift;;
+	--command|-c)	shift; commands+="${commands:+ $MEMOIZEFILE_COMMAND_JOINER }$1"; shift;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
@@ -111,7 +112,7 @@ if [ $# -ne 0 ]; then
     # undo the effects of eval.
     printf -v quotedSimpleCommand '%q ' "$@"
     printf -v escapedFileMarker %q "$fileMarker"
-    commands+=(${commands:+;} "${quotedSimpleCommand//"$escapedFileMarker"/$fileMarker}")	# %q escapes {}, we don't want that to have it interpolated later.
+    commands+="${commands:+ $MEMOIZEFILE_COMMAND_JOINER }${quotedSimpleCommand//"$escapedFileMarker"/$fileMarker}"	# %q escapes {}, we don't want that to have it interpolated later.
 fi
 if [ -z "$file" ]; then
     echo 'ERROR: No FILE passed.'
@@ -123,8 +124,8 @@ fi >&2
 
 update()
 {
-    typeset -a interpolatedCommands=("${commands[@]//"$fileMarker"/$file}")
-    eval "${interpolatedCommands[@]}"
+    local interpolatedCommands="${commands//"$fileMarker"/$file}"
+    eval "$interpolatedCommands"
 }
 getModificationEpoch()
 {
@@ -154,7 +155,7 @@ else
     [ "$isVerbose" ] && printf >&2 '%s does not exist yet.\n' "$file"
 fi
 
-if [ ${#commands[@]} -eq 0 ]; then
+if [ -z "$commands" ]; then
     if [ ! "$needsUpdate" ]; then
 	if [ "$isTee" ]; then
 	    exec cat
@@ -163,7 +164,7 @@ if [ ${#commands[@]} -eq 0 ]; then
 	fi
     fi
 
-    commands=('cat > "$file"')
+    commands='cat > "$file"'
     isRedirect=''   # Not needed when reading from standard input; silently ignore instead of complaining.
 fi
 if [ ! "$needsUpdate" ]; then
