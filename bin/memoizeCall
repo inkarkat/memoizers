@@ -3,21 +3,40 @@ shopt -qs extglob
 
 : ${MEMOIZECALL_COMMAND_JOINER=;}
 
+printShortUsage()
+{
+    # Note: short followed by long option; if the user knows the short one, she can
+    # skim the long one.
+    printf 'Usage: %q %s\n' "$(basename "$1")" '[-t|--for VALID-TIMESPAN[SUFFIX]|second|minute|hour|day|week|month|year|every N (seconds|minutes|hours|days|weeks)] [--timestamp EPOCH] [--successful-only] [-g|--memoize-group GROUP] [-s|--subject SUBJECT] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+    printf 'Usage: echo COMMANDLINES | %q %s\n' "$(basename "$1")" '[...] [-?|-h|--help]'
+    printf 'Usage: %q %s <<EOF\n  COMMANDLINE\n...\nEOF\n' "$(basename "$1")" '[...]'
+}
 printUsage()
 {
-    cat <<HELPTEXT
+    # This is the short help when launched with no or incorrect arguments.
+    # It is printed to stderr to avoid accidental processing.
+    printShortUsage "$1" >&2
+    printf >&2 '\nTry %q --help for more information.\n' "$(basename "$1")"
+}
+printLongUsage()
+{
+    # This is the long "man page" when launched with the help argument.
+    # It is printed to stdout to allow paging with 'more'.
+    cat <<HELPDESCRIPTION
 If COMMAND (SUBJECT if passed) has not yet been executed (within
 VALID-TIMESPAN|TIMESLOT), execute it and record its exit status and output (but
 not error messages, --successful-only skips recording for failed commands so
 that the next invocation will retry) for later recalls (of the same COMMAND /
 SUBJECT [/ GROUP]).
+HELPDESCRIPTION
+    echo
+    printShortUsage "$1"
+    echo
+    cat <<HELPTEXT
+RELATED COMMANDS:
+- bash-cache (https://github.com/dimo414/bash-cache) transparently decorates a
+  Bash function.
 HELPTEXT
-    echo
-    printf 'Usage: %q %s\n' "$(basename "$1")" '[-t|--for VALID-TIMESPAN[SUFFIX]|second|minute|hour|day|week|month|year|every N (seconds|minutes|hours|days|weeks)] [--timestamp EPOCH] [--successful-only] [-g|--memoize-group GROUP] [-s|--subject SUBJECT] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
-    echo
-    printf 'Usage: echo COMMANDLINES | %q %s\n' "$(basename "$1")" '[...] [-?|-h|--help]'
-    echo
-    printf 'Usage: %q %s <<EOF\n  COMMANDLINE\n...\nEOF\n' "$(basename "$1")" '[...]'
 }
 
 validity=
@@ -30,7 +49,7 @@ typeset -a executionMarkerArgs=()
 while [ $# -ne 0 ]
 do
     case "$1" in
-	--help|-h|-\?)		shift; printUsage "$0"; exit 0;;
+	--help|-h|-\?)		shift; printLongUsage "$0"; exit 0;;
 	--for|-t)		shift; validity="$1"; shift;;
 	--timestamp)		executionMarkerArgs+=("$1" "$2"); shift; shift;;
 	--successful-only)	shift; isSuccessfulOnly=t;;
