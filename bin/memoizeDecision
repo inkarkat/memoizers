@@ -210,7 +210,7 @@ marker()
 
 fallbackMarker()
 {
-    marker --fallback-subject '*' "$@"
+    marker --fallback-subject '*' --fallback-on-time "$@"
 }
 
 writeMarker()
