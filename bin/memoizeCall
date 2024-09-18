@@ -7,7 +7,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" '[-t|--for VALID-TIMESPAN[SUFFIX]|second|minute|hour|day|week|month|year|every N (seconds|minutes|hours|days|weeks)] [--timestamp EPOCH] [--successful-only] [-g|--memoize-group GROUP] [-s|--subject SUBJECT] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '[-t|--for VALID-TIMESPAN[SUFFIX]|second|minute|hour|day|week|month|year|every N (seconds|minutes|hours|days|weeks)] [--timestamp EPOCH] [-S|--successful-only] [-g|--memoize-group GROUP] [-s|--subject SUBJECT] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
     printf 'Usage: echo COMMANDLINES | %q %s\n' "$(basename "$1")" '[...] [-?|-h|--help]'
     printf 'Usage: %q %s <<EOF\n  COMMANDLINE\n...\nEOF\n' "$(basename "$1")" '[...]'
 }
@@ -25,14 +25,20 @@ printLongUsage()
     cat <<HELPDESCRIPTION
 If COMMAND (SUBJECT if passed) has not yet been executed (within
 VALID-TIMESPAN|TIMESLOT), execute it and record its exit status and output (but
-not error messages, --successful-only skips recording for failed commands so
-that the next invocation will retry) for later recalls (of the same COMMAND /
-SUBJECT [/ GROUP]).
+not error messages) for later recalls (of the same COMMAND / SUBJECT [/ GROUP]).
 HELPDESCRIPTION
     echo
     printShortUsage "$1"
     echo
     cat <<HELPTEXT
+    --for|-t VALID-TIMESPAN[SUFFIX]|second|minute|hour|day|week|month|year|every
+	N (seconds|minutes|hours|days|weeks)
+			Limit the validity of the memoized command's exit status
+			and output. After that time, the command will be
+			re-executed again.
+    --successful-only|-S
+			Skip recording for failed commands so that the next
+			invocation will retry the command.
 RELATED COMMANDS:
 - bash-cache (https://github.com/dimo414/bash-cache) transparently decorates a
   Bash function.
@@ -52,7 +58,7 @@ do
 	--help|-h|-\?)		shift; printLongUsage "$0"; exit 0;;
 	--for|-t)		shift; validity="$1"; shift;;
 	--timestamp)		executionMarkerArgs+=("$1" "$2"); shift; shift;;
-	--successful-only)	shift; isSuccessfulOnly=t;;
+	--successful-only|-S)	shift; isSuccessfulOnly=t;;
 	--memoize-group|-g)	shift; group="$1"; shift;;
 	--subject|-s)		shift; subject="$1"; shift;;
 	--command|-c)		shift; commands+="${commands:+ $MEMOIZECALL_COMMAND_JOINER }$1"; shift;;
