@@ -124,7 +124,8 @@ fi >&2
 
 update()
 {
-    local interpolatedCommands="${commands//"$fileMarker"/$file}"
+    local quotedFile; printf -v quotedFile %q "$file"
+    local interpolatedCommands="${commands//"$fileMarker"/$quotedFile}"
     eval "$interpolatedCommands"
 }
 getModificationEpoch()
