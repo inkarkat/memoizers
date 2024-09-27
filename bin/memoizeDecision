@@ -149,8 +149,10 @@ decision=
 isRecallOnly=
 timeout=
 typeset -a readArgs=()
+memoizeAction=memoize
 specialAction=
 isPrintDecision=
+passedResult=
 while [ $# -ne 0 ]
 do
     case "$1" in
@@ -407,74 +409,74 @@ deleteAllDecisions()
     marker --drop
 }
 
-if [ -n "$specialAction" ]; then
-    $specialAction "$@"
-    exit 0
-fi
 
-
-while :
-do
-    if hasMarker "$subject"; then
-	printResult "$markerExitStatus"
-	exit $markerExitStatus
-    elif [ "$isRecallOnly" ]; then
-	if [ -n "$default" ]; then
-	    processChoice "$default"
-	    status=$?
-	    printResult "$status"
-	    exit $status
-	else
-	    exit 3
-	fi
-    else
-	# Force reading directly from terminal / null device if stdin is redirected,
-	# to avoid consuming input.
-	if [ "$MEMOIZEDECISION_CHOICE" ] || { exec 0</dev/tty; } 2>/dev/null; then
-	    printf -v query '%s%s %s %s. Shall I %s?%s' "$MEMOIZEDECISION_QUERY_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_QUERY_SUFFIX"
-	    p=$MEMOIZEDECISION_OPTION_ACCELERATOR_PREFIX
-	    q=$MEMOIZEDECISION_OPTION_ACCELERATOR_SUFFIX
-	    pp=$MEMOIZEDECISION_POSITIVE_OPTION_ACCELERATOR_PREFIX
-	    pq=$MEMOIZEDECISION_POSITIVE_OPTION_ACCELERATOR_SUFFIX
-	    np=$MEMOIZEDECISION_NEGATIVE_OPTION_ACCELERATOR_PREFIX
-	    nq=$MEMOIZEDECISION_NEGATIVE_OPTION_ACCELERATOR_SUFFIX
-	    gp="${MEMOIZEDECISION_POSITIVE_OPTION_GROUP_PREFIX}${group}${MEMOIZEDECISION_POSITIVE_OPTION_GROUP_SUFFIX}"
-	    gn="${MEMOIZEDECISION_NEGATIVE_OPTION_GROUP_PREFIX}${group}${MEMOIZEDECISION_NEGATIVE_OPTION_GROUP_SUFFIX}"
-	    ts="for $(getTimespanDuration --short-units)"
-	    printf -v options "(%s%s${pp}c${pq}onfirm each / ${pp}y${pq}es $ts / ${pp}a${pq}ny %s $ts / a${pp}l${pq}ways / ${pp}A${pq}ny %s always%s / %s${np}d${nq}ecline each = ${np}q${nq}uit / ${np}n${nq}o $ts / n${np}o${nq}ne from %s $ts / ne${np}v${nq}er / ${np}N${nq}one from %s never%s / ${p}h${q}elp)" \
-		"$MEMOIZEDECISION_POSITIVE_OPTION_PREFIX" "$timeout" "$gp" "$gp" "$MEMOIZEDECISION_POSITIVE_OPTION_SUFFIX" "$MEMOIZEDECISION_NEGATIVE_OPTION_PREFIX" "$gn" "$gn" "$MEMOIZEDECISION_NEGATIVE_OPTION_SUFFIX"
-	    if [ "$MEMOIZEDECISION_CHOICE" ]; then
-		if ! assertValidChoice "$MEMOIZEDECISION_CHOICE"; then
-		    printf >&2 'ERROR: Invalid MEMOIZEDECISION_CHOICE: %s\n' "$MEMOIZEDECISION_CHOICE"
-		    exit 2
-		fi
-
-		choice="$MEMOIZEDECISION_CHOICE"
-		printf >&2 '%s%s\n' "$query $options " "$choice"
-		status=0
-	    else
-		choice="$(userchoice --valid "${VALID_CHOICE_GLOB}|h" --keep-prompt "${readArgs[@]}" -n 1 -p "$query $options ")"
-		status=$?
-		assertValidChoice "$choice" 'h' || exit 3
-	    fi
-	else
-	    # When we cannot read from the terminal ("/dev/tty: No such device or address"), use default or abort.
-	    status=129
-	fi
-
-	if [ $status -gt 128 ]; then
+memoize()
+{
+    while :
+    do
+	if hasMarker "$subject"; then
+	    printResult "$markerExitStatus"
+	    exit $markerExitStatus
+	elif [ "$isRecallOnly" ]; then
 	    if [ -n "$default" ]; then
-		choice="$default"
+		processChoice "$default"
+		status=$?
+		printResult "$status"
+		exit $status
 	    else
 		exit 3
 	    fi
-	elif [ $status -ne 0 ]; then
-	    exit 3
-	fi
-    fi
+	else
+	    # Force reading directly from terminal / null device if stdin is redirected,
+	    # to avoid consuming input.
+	    if [ "$MEMOIZEDECISION_CHOICE" ] || { exec 0</dev/tty; } 2>/dev/null; then
+		printf -v query '%s%s %s %s. Shall I %s?%s' "$MEMOIZEDECISION_QUERY_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_QUERY_SUFFIX"
+		p=$MEMOIZEDECISION_OPTION_ACCELERATOR_PREFIX
+		q=$MEMOIZEDECISION_OPTION_ACCELERATOR_SUFFIX
+		pp=$MEMOIZEDECISION_POSITIVE_OPTION_ACCELERATOR_PREFIX
+		pq=$MEMOIZEDECISION_POSITIVE_OPTION_ACCELERATOR_SUFFIX
+		np=$MEMOIZEDECISION_NEGATIVE_OPTION_ACCELERATOR_PREFIX
+		nq=$MEMOIZEDECISION_NEGATIVE_OPTION_ACCELERATOR_SUFFIX
+		gp="${MEMOIZEDECISION_POSITIVE_OPTION_GROUP_PREFIX}${group}${MEMOIZEDECISION_POSITIVE_OPTION_GROUP_SUFFIX}"
+		gn="${MEMOIZEDECISION_NEGATIVE_OPTION_GROUP_PREFIX}${group}${MEMOIZEDECISION_NEGATIVE_OPTION_GROUP_SUFFIX}"
+		ts="for $(getTimespanDuration --short-units)"
+		printf -v options "(%s%s${pp}c${pq}onfirm each / ${pp}y${pq}es $ts / ${pp}a${pq}ny %s $ts / a${pp}l${pq}ways / ${pp}A${pq}ny %s always%s / %s${np}d${nq}ecline each = ${np}q${nq}uit / ${np}n${nq}o $ts / n${np}o${nq}ne from %s $ts / ne${np}v${nq}er / ${np}N${nq}one from %s never%s / ${p}h${q}elp)" \
+		    "$MEMOIZEDECISION_POSITIVE_OPTION_PREFIX" "$timeout" "$gp" "$gp" "$MEMOIZEDECISION_POSITIVE_OPTION_SUFFIX" "$MEMOIZEDECISION_NEGATIVE_OPTION_PREFIX" "$gn" "$gn" "$MEMOIZEDECISION_NEGATIVE_OPTION_SUFFIX"
+		if [ "$MEMOIZEDECISION_CHOICE" ]; then
+		    if ! assertValidChoice "$MEMOIZEDECISION_CHOICE"; then
+			printf >&2 'ERROR: Invalid MEMOIZEDECISION_CHOICE: %s\n' "$MEMOIZEDECISION_CHOICE"
+			exit 2
+		    fi
 
-    processChoice "$choice"
-    status=$?
-    [ "$choice" = 'h' ] && continue
-    exit $status
-done
+		    choice="$MEMOIZEDECISION_CHOICE"
+		    printf >&2 '%s%s\n' "$query $options " "$choice"
+		    status=0
+		else
+		    choice="$(userchoice --valid "${VALID_CHOICE_GLOB}|h" --keep-prompt "${readArgs[@]}" -n 1 -p "$query $options ")"
+		    status=$?
+		    assertValidChoice "$choice" 'h' || exit 3
+		fi
+	    else
+		# When we cannot read from the terminal ("/dev/tty: No such device or address"), use default or abort.
+		status=129
+	    fi
+
+	    if [ $status -gt 128 ]; then
+		if [ -n "$default" ]; then
+		    choice="$default"
+		else
+		    exit 3
+		fi
+	    elif [ $status -ne 0 ]; then
+		exit 3
+	    fi
+	fi
+
+	processChoice "$choice"
+	status=$?
+	[ "$choice" = 'h' ] && continue
+	exit $status
+    done
+}
+
+${specialAction:-$memoizeAction} "$@"
