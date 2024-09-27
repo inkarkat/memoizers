@@ -49,6 +49,8 @@ printShortUsage()
     printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -q|--get-decision|-D|--delete-decision'
     echo
     printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP --delete-all-decisions'
+    echo
+    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION --print-result STATUS'
 }
 printUsage()
 {
@@ -118,7 +120,10 @@ MEMOIZEDECISION_CHOICE.
 				stdout in a format that can then be passed to
 				--set-decision. Useful to automatically apply a
 				decision to other subjects as well.
-
+    --print-result STATUS	Just print the result message for the given STATUS.
+				This doesn't memoize or recall anything; it
+				purely renders the arguments. STATUS is 0
+				(ACTION should be performed) or 1 (not).
 EXIT STATUS:
     0 if ACTION should be performed
     1 if not
@@ -195,6 +200,14 @@ do
 			shift; specialAction=deleteDecision;;
 	--delete-all-decisions)
 			shift; specialAction=deleteAllDecisions;;
+	--print-result)	shift
+			memoizeAction=printPassedResult
+			case "$1" in
+			    0|1)	passedResult="$1";;
+			    *)		echo >&2 'ERROR: Invalid STATUS.'; exit 2;;
+			esac
+			shift
+			;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
@@ -387,6 +400,11 @@ printResult()
     else
 	printf >&2 '%s%s %s %s. Do not %s.%s\n' "$MEMOIZEDECISION_NEGATIVE_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_NEGATIVE_SUFFIX"
     fi
+}
+
+printPassedResult()
+{
+    printResult "${passedResult:?}"
 }
 
 deleteDecision()
