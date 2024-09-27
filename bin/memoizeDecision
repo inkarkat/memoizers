@@ -149,7 +149,7 @@ decision=
 isRecallOnly=
 timeout=
 typeset -a readArgs=()
-specialFunction=
+specialAction=
 isPrintDecision=
 while [ $# -ne 0 ]
 do
@@ -178,7 +178,7 @@ do
 			case "$1" in
 			    yes|y|any|a|always|l|any-always|A|no|n|none|o|never|v|none-never|N)
 				decision="$1"
-				specialFunction=setDecision
+				specialAction=setDecision
 				;;
 			    '')	echo >&2 'ERROR: Missing decision.'; exit 2;;
 			    *)	printf >&2 'ERROR: Invalid decision: %s\n' "$1"; exit 2;;
@@ -186,19 +186,19 @@ do
 			shift
 			;;
 	--get-decision|-q)
-			shift; specialFunction=getDecision;;
+			shift; specialAction=getDecision;;
 	--print-decision|-p)
 			shift; isPrintDecision=t;;
 	--delete-decision|-D)
-			shift; specialFunction=deleteDecision;;
+			shift; specialAction=deleteDecision;;
 	--delete-all-decisions)
-			shift; specialFunction=deleteAllDecisions;;
+			shift; specialAction=deleteAllDecisions;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
     esac
 done
-if [ $# -gt 0 -a -z "$specialFunction" -a \( -z "$group" -o -z "$subject" -o -z "$state" -o -z "$action" \) ]; then
+if [ $# -gt 0 -a -z "$specialAction" -a \( -z "$group" -o -z "$subject" -o -z "$state" -o -z "$action" \) ]; then
     printUsage "$0"
     exit 2
 fi
@@ -407,8 +407,8 @@ deleteAllDecisions()
     marker --drop
 }
 
-if [ -n "$specialFunction" ]; then
-    $specialFunction "$@"
+if [ -n "$specialAction" ]; then
+    $specialAction "$@"
     exit 0
 fi
 
