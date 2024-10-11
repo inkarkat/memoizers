@@ -116,7 +116,7 @@ MEMOIZEDECISION_CHOICE.
     --delete-decision|-D	Forget any stored decision for SUBJECT.
     --delete-all-decisions	Forget any stored decisions for the entire GROUP
 				(i.e. all SUBJECTs).
-    --print-decision|-p		Also print the queryied (/ passed) decision to
+    --print-decision|-p		Also print the queried / passed decision to
 				stdout in a format that can then be passed to
 				--set-decision. Useful to automatically apply a
 				decision to other subjects as well.
