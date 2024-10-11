@@ -42,7 +42,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--recall-only]|([--timespan TIMESPAN[SUFFIX]] [--timeout TIMEOUT[SUFFIX]]) [-d|--default c|y|a|l|A|d|n|o|v|N] [--ephemeral] [-p|--print-decision] [-?|-h|--help]'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--recall-only]|([--timespan TIMESPAN[SUFFIX]] [--timeout TIMEOUT[SUFFIX]]) [-d|--default c|y|a|l|A|d|n|o|v|N] [--ephemeral [--any-key|--clear-prompt|--clear-all-prompt|--keep-prompt]] [-p|--print-decision] [-?|-h|--help]'
     echo
     printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -c|--set-decision y|a|l|A|n|o|v|N [-a|--action ACTION] [--timespan TIMESPAN[SUFFIX]] [-p|--print-decision]'
     echo
@@ -173,6 +173,7 @@ memoizeAction=memoize	# These require GROUP, SUBJECT, STATE, ACTION.
 specialAction=
 isPrintDecision=
 passedResult=
+typeset -a offerToArgs=()
 while [ $# -ne 0 ]
 do
     case "$1" in
@@ -226,6 +227,8 @@ do
 			shift
 			;;
 	--ephemeral)	shift; memoizeAction=ephemeralQuery;;
+	--any-key|--clear-prompt|--clear-all-prompt|--keep-prompt)
+			offerToArgs+=("$1"); shift;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
