@@ -42,7 +42,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--recall-only]|([--timespan TIMESPAN[SUFFIX]] [--timeout TIMEOUT[SUFFIX]]) [-d|--default c|y|a|l|A|d|n|o|v|N] [-p|--print-decision] [-?|-h|--help]'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--recall-only]|([--timespan TIMESPAN[SUFFIX]] [--timeout TIMEOUT[SUFFIX]]) [-d|--default c|y|a|l|A|d|n|o|v|N] [--ephemeral [--any-key|--clear-prompt|--clear-all-prompt|--keep-prompt]] [-p|--print-decision] [-?|-h|--help]'
     echo
     printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -c|--set-decision y|a|l|A|n|o|v|N [-a|--action ACTION] [--timespan TIMESPAN[SUFFIX]] [-p|--print-decision]'
     echo
@@ -102,6 +102,9 @@ MEMOIZEDECISION_CHOICE.
 				answer within the provided --timeout, or when
 				--recall-only is given and there's no previous
 				answer.
+    --ephemeral			Do not remember the decision at all; just use
+				the command's machinery for a simple yes/no
+				question.
     --set-decision|-c yes|y|any|a|always|l|any-always|A|no|n|none|o|never|v|none-never|N
 				Instead of querying, use the passed decision as
 				if the user had chosen it (for --timespan
@@ -131,6 +134,10 @@ MEMOIZEDECISION_CHOICE.
 				STATUS. This doesn't memoize or recall anything;
 				it purely renders the arguments. STATUS is 0
 				(ACTION should be performed) or 1 (not).
+SEE ALSO:
+- offerTo can obtain simple yes/no answers with a simpler API and without
+  persistence; this script's --ephemeral mode uses that under the hood.
+
 EXIT STATUS:
     0 if ACTION should be performed
     1 if not
@@ -160,11 +167,13 @@ default=
 decision=
 isRecallOnly=
 timeout=
+timeInSeconds=
 typeset -a readArgs=()
-memoizeAction=memoize
+memoizeAction=memoize	# These require GROUP, SUBJECT, STATE, ACTION.
 specialAction=
 isPrintDecision=
 passedResult=
+typeset -a offerToArgs=()
 while [ $# -ne 0 ]
 do
     case "$1" in
@@ -217,6 +226,9 @@ do
 			esac
 			shift
 			;;
+	--ephemeral)	shift; memoizeAction=ephemeralQuery;;
+	--any-key|--clear-prompt|--clear-all-prompt|--keep-prompt)
+			offerToArgs+=("$1"); shift;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
@@ -524,6 +536,21 @@ memoize()
 	[ "$choice" = 'h' ] && continue
 	exit $status
     done
+}
+
+ephemeralQuery()
+{
+    case "$default" in
+	'') ;;
+	c|confirm-each|y|yes|a|any|l|always|A|any-always)
+	    offerToArgs+=(--default yes);;
+	d|decline-each|q|n|no|o|none|v|never|N|none-never)
+	    offerToArgs+=(--default yes);;
+	*)  printf >&2 'ASSERT: Unhandled default: %s\n' "$default"; exit 3;;
+    esac
+
+    printf -v query '%s%s %s %s. Shall I %s?%s' "$MEMOIZEDECISION_QUERY_PREFIX" "$subject" "$verb" "$state" "$action" "$MEMOIZEDECISION_QUERY_SUFFIX"
+    exec offerTo ${timeInSeconds:+--timeout $timeInSeconds} "${offerToArgs[@]}" "$query"
 }
 
 ${specialAction:-$memoizeAction} "$@"
