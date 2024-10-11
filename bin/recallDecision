@@ -6,13 +6,13 @@ printUsage()
 	-e '1s#^.*$#Recall whether ACTION should be performed on SUBJECT to turn it into STATE (or use [and remember] the passed default).#' \
 	-e '2b removeFirstParagraphLoop' \
 	-e '/--set-decision\|--delete-decision\|--delete-all-decisions\|--print-result/{ N; d; }' \
-	-e '/^ *\(--recall-only\|--timeout\|--timespan\|--set-decision\|--delete-decision\|--delete-all-decisions\|--print-result\)/b removeOptionLoop' \
+	-e '/^ *\(--recall-only\|--timeout\|--timespan\|--set-decision\|--check\|--has-decision\|--delete-decision\|--delete-all-decisions\|--print-result\)/b removeOptionLoop' \
 	-e '/^Usage:$/N' -e '/\(^\|\n\)Usage: */{ s/\(^\|\n\)\(Usage: *\)\?\([^ ]\+ \)*memoizeDecision /\1\2'"$(basename "$1")"' /; s/\[--recall-only\]|(\[--timespan TIMESPAN\[SUFFIX\]\] \[--timeout TIMEOUT\[SUFFIX\]\])// }' \
 	-e '/^Example:$/N' -e '/\(^\|\n\)Example: */{ s/\(^\|\n\)\(Example: *\)\?memoizeDecision .*/\1\2'"$(basename "$1") / }" \
 	-e b -e :removeFirstParagraphLoop -e '{ /\(^\|\n\)$/{ s/^\(.*\n\)\?//; b; }; N; b removeFirstParagraphLoop }' \
 	-e b -e :removeOptionLoop \
 	-e 's# queried / passed # recalled #g' \
-	-e '{ /\n *\(--recall-only\|--timeout\|--timespan\|--set-decision\|--delete-decision\|--delete-all-decisions\|--print-result\)[^\n]*$/{ N; b removeOptionLoop; }; /\n *--[^\n]*$\|\n[^	 ]\|\n$/{ s/^\(.*\n\)\?//; b; }; N; b removeOptionLoop }'
+	-e '{ /\n *\(--recall-only\|--timeout\|--timespan\|--set-decision\|--check\|--has-decision\|--delete-decision\|--delete-all-decisions\|--print-result\)[^\n]*$/{ N; b removeOptionLoop; }; /\n *--[^\n]*$\|\n[^	 ]\|\n$/{ s/^\(.*\n\)\?//; b; }; N; b removeOptionLoop }'
 }
 case "$1" in
     --help|-h|-\?)	shift; printUsage "$0"; exit 0;;
