@@ -17,7 +17,7 @@ setup()
 
 dump_input()
 {
-    prefix '#' "$RECORD" >&3
+    sed -e 's/^/#/' "$RECORD" >&3
 }
 assert_input()
 {
