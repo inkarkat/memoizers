@@ -6,7 +6,7 @@ load fixture
     runWithInput $'first\nfoo\nfoo bar\nfoo\nbar\nlast' memoizeLines --command 'recorder | exit 42'
     [ $status -eq 42 ]
     [ "$output" = "" ]
-    assert_input ''
+    assert_input '' || assert_input 'first' # At most (depending on timing) the first line has been recorded.
 }
 
 @test "command failing later exits with status and aborts the output there" {

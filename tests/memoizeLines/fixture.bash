@@ -5,7 +5,7 @@ export RECORD="${BATS_TMPDIR}/record"
 clean_recorder()
 {
     rm -f -- "$RECORD"
-    }
+}
 fixtureSetup()
 {
     clean_recorder
@@ -39,7 +39,7 @@ runWithInput()
 
 recorder()
 {
-    tee -a -- "$RECORD"
+    tee --append -- "$RECORD"
 }
 export -f recorder
 
