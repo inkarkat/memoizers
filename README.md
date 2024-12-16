@@ -2,6 +2,8 @@
 
 _Commands that record and recall contents, command outputs, user choices, etc._
 
+![Build Status](https://github.com/inkarkat/memoizers/actions/workflows/build.yml/badge.svg)
+
 ### Dependencies
 
 * Bash, GNU `sed`
