@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export XDG_CACHE_HOME="${BATS_TMPDIR}/cache"
 export XDG_DATA_HOME="$BATS_TMPDIR"
 
 setup() {

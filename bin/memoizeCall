@@ -2,12 +2,13 @@
 shopt -qs extglob
 
 : ${MEMOIZECALL_COMMAND_JOINER=;}
+: ${MEMOIZECALL_EXTERNALIZE_OUTPUT_THRESHOLD=20000}
 
 printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" '[-t|--for VALID-TIMESPAN[SUFFIX]|second|minute|hour|day|week|month|year|every N (seconds|minutes|hours|days|weeks)] [--timestamp EPOCH] [-S|--successful-only] [-g|--memoize-group GROUP] [-s|--subject SUBJECT] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+    printf 'Usage: [MEMOIZECALL_EXTERNALIZE_OUTPUT_THRESHOLD=BYTES] %q %s\n' "$(basename "$1")" '[-t|--for VALID-TIMESPAN[SUFFIX]|second|minute|hour|day|week|month|year|every N (seconds|minutes|hours|days|weeks)] [--timestamp EPOCH] [-S|--successful-only] [-g|--memoize-group GROUP] [-s|--subject SUBJECT] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
     printf 'Usage: echo COMMANDLINES | %q %s\n' "$(basename "$1")" '[...] [-?|-h|--help]'
     printf 'Usage: %q %s <<EOF\n  COMMANDLINE\n...\nEOF\n' "$(basename "$1")" '[...]'
 }
@@ -95,11 +96,38 @@ marker()
     executionMarker --base-type data "${executionMarkerArgs[@]}" "$@"
 }
 
+readonly CACHE_DIRSPEC="${XDG_CACHE_HOME:-${HOME}/.cache}/memoizeCall"
+writeExternalHashFile()
+{
+    local output="${1:?}"; shift
+    local externalHash; externalHash="$(printf '%s-%s' "$group" "$subject" | sha256sum -)" || exit 3
+    local externalHashFilespec="${CACHE_DIRSPEC}/${externalHash%% *}"
+
+    [ -d "$CACHE_DIRSPEC" ] || mkdir --parents -- "$CACHE_DIRSPEC" || { printf >&2 'ERROR: Could not initialize cache store at %s\n' "$CACHE_DIRSPEC"; return 1; }
+    printf '%s\n' "$output" > "$externalHashFilespec" || { printf >&2 'ERROR: Could not write memoized output to file %s from %s\n' "$externalHashFilespec" "$commands"; return 1; }
+    printf %s "$externalHashFilespec"
+
+}
+readExternalHashFile()
+{
+    local externalHashFilespec="${1:?}"; shift
+    if ! cat -- "$externalHashFilespec" 2>/dev/null; then
+	printf >&2 'Warning: Could not read memoized output from file %s; reexecuting %s\n' "$externalHashFilespec" "$commands"
+	return 1
+    fi
+}
+
 if context="$(marker --query "$subject" ${validity:+--within "$validity"} --get-context)"; then
     exitStatus="${context%% *}"
     output="${context#* }"
-    [ -z "$output" ] || printf '%s\n' "$output"
-    exit $exitStatus
+
+    if [[ "$exitStatus" = E* ]]; then
+	exitStatus="${exitStatus#E}"
+	readExternalHashFile "$output" && exit $exitStatus
+    else
+	[ -z "$output" ] || printf '%s\n' "$output"
+	exit $exitStatus
+    fi
 fi
 
 
@@ -114,5 +142,12 @@ exitStatus=$?
 [ -z "$output" ] || printf '%s\n' "$output"
 
 [ $exitStatus -ne 0 -a -n "$isSuccessfulOnly" ] && exit $exitStatus
-marker --update "$subject" --context "$exitStatus $output"
+
+context="$exitStatus $output"
+if [ -n "$MEMOIZECALL_EXTERNALIZE_OUTPUT_THRESHOLD" ] && [ ${#output} -ge $MEMOIZECALL_EXTERNALIZE_OUTPUT_THRESHOLD ]; then
+    externalHashFilespec="$(writeExternalHashFile "$output")" \
+	&& context="E$exitStatus $externalHashFilespec"
+fi
+
+marker --update "$subject" --context "$context"
 exit $exitStatus
