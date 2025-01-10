@@ -84,8 +84,8 @@ if [ -z "$commands" ]; then
     exit 2
 fi
 
-[ "$subject" ] || subject="$commands"
-if [ "$group" ]; then
+[ -n "$subject" ] || subject="$commands"
+if [ -n "$group" ]; then
     executionMarkerArgs+=(--namespace memoizeCall.d --group "$group")
 else
     executionMarkerArgs+=(--group memoizeCall)
@@ -98,7 +98,7 @@ marker()
 if context="$(marker --query "$subject" ${validity:+--within "$validity"} --get-context)"; then
     exitStatus="${context%% *}"
     output="${context#* }"
-    [ "$output" ] && printf '%s\n' "$output"
+    [ -z "$output" ] || printf '%s\n' "$output"
     exit $exitStatus
 fi
 
@@ -111,7 +111,7 @@ output="$(
     fi
 )"
 exitStatus=$?
-[ "$output" ] && printf '%s\n' "$output"
+[ -z "$output" ] || printf '%s\n' "$output"
 
 [ $exitStatus -ne 0 -a -n "$isSuccessfulOnly" ] && exit $exitStatus
 marker --update "$subject" --context "$exitStatus $output"
