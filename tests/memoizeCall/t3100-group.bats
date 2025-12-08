@@ -10,9 +10,8 @@ load temp_config
     export testStatus=88
     export testMessage='variant with group'
     run memoizeCall --memoize-group testGroup testCommand
-
-    [ $status -eq $testStatus ]
-    [ "$output" = "$testMessage" ]
+    assert_failure $testStatus
+    assert_output "$testMessage"
 }
 
 @test "different groups make identical commands memoize to different results" {
@@ -23,7 +22,6 @@ load temp_config
     export testStatus=88
     export testMessage='variant in group B'
     run memoizeCall --memoize-group testGroup testCommand
-
-    [ $status -eq $testStatus ]
-    [ "$output" = "$testMessage" ]
+    assert_failure $testStatus
+    assert_output "$testMessage"
 }

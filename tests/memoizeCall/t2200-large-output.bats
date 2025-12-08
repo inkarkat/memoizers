@@ -5,7 +5,7 @@ load temp_config
 @test "command with small output is invoked only once and returns first message and status on repeat" {
     export TOKEN='frist'
     export STATUS=0
-    run memoizeCall -c 'echo $TOKEN; seq 1 1000; exit $STATUS'
+    run -0 memoizeCall -c 'echo $TOKEN; seq 1 1000; exit $STATUS'
     firstOutput="$output"
 
     export TOKEN='This is now different'
@@ -17,7 +17,7 @@ load temp_config
 @test "command with large output is invoked only once and returns first message and status on repeat" {
     export TOKEN='frist'
     export STATUS=0
-    run memoizeCall -c 'echo $TOKEN; seq 1 100000; exit $STATUS'
+    run -0 memoizeCall -c 'echo $TOKEN; seq 1 100000; exit $STATUS'
     firstOutput="$output"
 
     export TOKEN='This is now different'
@@ -29,7 +29,7 @@ load temp_config
 @test "command with large output is reexecuted if the cache is gone" {
     export TOKEN='frist'
     export STATUS=0
-    run memoizeCall -c 'echo $TOKEN; seq 1 100000; exit $STATUS'
+    run -0 memoizeCall -c 'echo $TOKEN; seq 1 100000; exit $STATUS'
     firstOutput="$output"
 
     export TOKEN='This is now different'
