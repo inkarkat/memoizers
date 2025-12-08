@@ -3,35 +3,47 @@
 load persistence
 
 @test "a single persisted transformation is reused by a second invocation" {
-    runWithInput 'foo' memoizeLines --persist transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[foo]" ]
+    run -0 memoizeLines --persist transformer <<<'foo'
+    assert_output '[foo]'
     assert_input 'foo'
 
     clean_recorder
-    runWithInput 'foo' memoizeLines --persist transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[foo]" ]
+    run -0 memoizeLines --persist transformer <<<'foo'
+    assert_output '[foo]'
     assert_input ''
 }
 
 @test "persisted transformations are reused by a second invocation" {
-    runWithInput $'foo\nbar\nthree\nbar\nlast' memoizeLines --persist transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[foo]
+    run -0 memoizeLines --persist transformer <<'EOF'
+foo
+bar
+three
+bar
+last
+EOF
+    assert_output - <<'EOF'
+[foo]
 [bar]
 [three]
 [bar]
-[last]" ]
+[last]
+EOF
     assert_input $'foo\nbar\nthree\nlast'
 
     clean_recorder
-    runWithInput $'three\nbar\nfour\nfoo\nfive' memoizeLines --persist transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[three]
+    run -0 memoizeLines --persist transformer <<'EOF'
+three
+bar
+four
+foo
+five
+EOF
+    assert_output - <<'EOF'
+[three]
 [bar]
 [four]
 [foo]
-[five]" ]
+[five]
+EOF
     assert_input $'four\nfive'
 }

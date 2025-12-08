@@ -3,9 +3,26 @@
 load fixture
 
 @test "very verbose on cache size 3" {
-    runWithInput $'foo\nfoo\nbar\nbar\nthird\nthird\nfourth\nfifth\nthird\nfourth\nfifth\nfoo\nfourth\nthird\nfoo\nbar' memoizeLines --verbose --verbose --size 3 transformer
-    [ $status -eq 0 ]
-    [ "$output" = 'memoizeLines: Cache miss for "foo": [foo]
+    run -0 memoizeLines --verbose --verbose --size 3 transformer <<'EOF'
+foo
+foo
+bar
+bar
+third
+third
+fourth
+fifth
+third
+fourth
+fifth
+foo
+fourth
+third
+foo
+bar
+EOF
+    assert_output - <<'EOF'
+memoizeLines: Cache miss for "foo": [foo]
 [foo]
 memoizeLines: Cache hit for "foo": [foo]
 [foo]
@@ -42,5 +59,6 @@ memoizeLines: Cache hit for "foo": [foo]
 memoizeLines: Evicting "fourth"
 memoizeLines: Cache miss for "bar": [bar]
 [bar]
-memoizeLines: 16 lines, 8 cache hits (50%).' ]
+memoizeLines: 16 lines, 8 cache hits (50%).
+EOF
 }

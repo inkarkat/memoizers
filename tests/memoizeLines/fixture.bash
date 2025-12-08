@@ -1,5 +1,9 @@
 #!/bin/bash
 
+bats_require_minimum_version 1.5.0
+bats_load_library bats-support
+bats_load_library bats-assert
+
 export RECORD="${BATS_TMPDIR}/record"
 
 clean_recorder()
@@ -25,16 +29,6 @@ assert_input()
 	dump_input
 	return 1
     fi
-}
-
-inputWrapper()
-{
-    local input="$1"; shift
-    printf '%s\n' "$input" | "$@"
-}
-runWithInput()
-{
-    run inputWrapper "$@"
 }
 
 recorder()

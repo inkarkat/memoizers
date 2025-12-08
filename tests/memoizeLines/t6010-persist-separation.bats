@@ -3,57 +3,63 @@
 load persistence
 
 @test "two different commands use different persistence" {
-    runWithInput 'foo' memoizeLines --persist transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[foo]" ]
+    run -0 memoizeLines --persist transformer <<<'foo'
+    assert_output '[foo]'
     assert_input 'foo'
 
     clean_recorder
-    runWithInput 'foo' memoizeLines --persist multiLineTransformer
-    [ $status -eq 0 ]
-    [ "$output" = "Start of foo:
+    run -0 memoizeLines --persist multiLineTransformer <<<'foo'
+    assert_output - <<'EOF'
+Start of foo:
   foo
----" ]
+---
+EOF
     assert_input 'foo'
 
     clean_recorder
-    runWithInput 'foo' memoizeLines --persist transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[foo]" ]
+    run -0 memoizeLines --persist transformer <<<'foo'
+    assert_output '[foo]'
     assert_input ''
 
     clean_recorder
-    runWithInput 'foo' memoizeLines --persist multiLineTransformer
-    [ $status -eq 0 ]
-    [ "$output" = "Start of foo:
+    run -0 memoizeLines --persist multiLineTransformer <<<'foo'
+    assert_output - <<'EOF'
+Start of foo:
   foo
----" ]
+---
+EOF
     assert_input ''
 }
 
 @test "the same command can use different persistence via id" {
-    runWithInput 'foo' memoizeLines --persist --id ID1 transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[foo]" ]
+    run -0 memoizeLines --persist --id ID1 transformer <<<'foo'
+    assert_output '[foo]'
     assert_input 'foo'
 
     clean_recorder
-    runWithInput 'bar' memoizeLines --persist --id ID2 transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[bar]" ]
+    run -0 memoizeLines --persist --id ID2 transformer <<<'bar'
+    assert_output '[bar]'
     assert_input 'bar'
 
     clean_recorder
-    runWithInput $'foo\nbar' memoizeLines --persist --id ID1 transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[foo]
-[bar]" ]
+    run -0 memoizeLines --persist --id ID1 transformer <<'EOF'
+foo
+bar
+EOF
+    assert_output - <<'EOF'
+[foo]
+[bar]
+EOF
     assert_input 'bar'
 
     clean_recorder
-    runWithInput $'foo\nbar' memoizeLines --persist --id ID2 transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[foo]
-[bar]" ]
+    run -0 memoizeLines --persist --id ID2 transformer <<'EOF'
+foo
+bar
+EOF
+    assert_output - <<'EOF'
+[foo]
+[bar]
+EOF
     assert_input 'foo'
 }

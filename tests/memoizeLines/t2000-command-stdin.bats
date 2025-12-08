@@ -3,44 +3,64 @@
 load fixture
 
 @test "transform first line" {
-    runWithInput 'first' memoizeLines transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[first]" ]
+    run -0 memoizeLines transformer <<<'first'
+    assert_output '[first]'
 }
 
 @test "transform two unique lines" {
-    runWithInput $'first\nsecond' memoizeLines transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[first]
-[second]" ]
+    run -0 memoizeLines transformer <<'EOF'
+first
+second
+EOF
+    assert_output - <<'EOF'
+[first]
+[second]
+EOF
     assert_input $'first\nsecond'
 }
 
 @test "transform two identical lines with single transformation" {
-    runWithInput $'foo\nfoo\nbar' memoizeLines transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[foo]
+    run -0 memoizeLines transformer <<'EOF'
+foo
+foo
+bar
+EOF
+    assert_output - <<'EOF'
 [foo]
-[bar]" ]
+[foo]
+[bar]
+EOF
     assert_input $'foo\nbar'
 }
 
 @test "transform empty lines with single transformation" {
-    runWithInput $'foo\n\n\nbar\n\nbaz' memoizeLines transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[foo]
+    run -0 memoizeLines transformer <<'EOF'
+foo
+
+
+bar
+
+baz
+EOF
+    assert_output - <<'EOF'
+[foo]
 []
 []
 [bar]
 []
-[baz]" ]
+[baz]
+EOF
     assert_input $'foo\n\nbar\nbaz'
 }
 
 @test "transform to multiple lines" {
-    runWithInput $'foo\nfoo\nbar' memoizeLines multiLineTransformer
-    [ $status -eq 0 ]
-    [ "$output" = "Start of foo:
+    run -0 memoizeLines multiLineTransformer <<'EOF'
+foo
+foo
+bar
+EOF
+    assert_output - <<'EOF'
+Start of foo:
   foo
 ---
 Start of foo:
@@ -48,15 +68,21 @@ Start of foo:
 ---
 Start of bar:
   bar
----" ]
+---
+EOF
     assert_input $'foo\nbar'
 }
 
 @test "transform to empty lines" {
-    runWithInput $'foo\nfoo\nbar' memoizeLines filterTransformer
-    [ $status -eq 0 ]
-    [ "$output" = "
+    run -0 memoizeLines filterTransformer <<'EOF'
+foo
+foo
+bar
+EOF
+    assert_output - <<'EOF'
 
-[bar]" ]
+
+[bar]
+EOF
     assert_input $'foo\nbar'
 }

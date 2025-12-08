@@ -3,38 +3,62 @@
 load fixture
 
 @test "transform via plain argument to command-line" {
-    runWithInput $'first\nfoo\nfoo bar\nfoo\nbar\nlast' memoizeLines --command 'argTransformer {}'
-    [ $status -eq 0 ]
-    [ "$output" = "[first]
+    run -0 memoizeLines --command 'argTransformer {}' <<'EOF'
+first
+foo
+foo bar
+foo
+bar
+last
+EOF
+    assert_output - <<'EOF'
+[first]
 [foo]
 [foo bar]
 [foo]
 [bar]
-[last]" ]
+[last]
+EOF
     assert_input $'first\nfoo\nfoo bar\nbar\nlast'
 }
 
 @test "transform via embellished argument to command" {
-    runWithInput $'first\nfoo\nfoo bar\nfoo\nbar\nlast' memoizeLines --command "argTransformer arg:{}"
-    [ $status -eq 0 ]
-    [ "$output" = "[arg:first]
+    run -0 memoizeLines --command "argTransformer arg:{}" <<'EOF'
+first
+foo
+foo bar
+foo
+bar
+last
+EOF
+    assert_output - <<'EOF'
+[arg:first]
 [arg:foo]
 [arg:foo bar]
 [arg:foo]
 [arg:bar]
-[arg:last]" ]
+[arg:last]
+EOF
     assert_input $'arg:first\narg:foo\narg:foo bar\narg:bar\narg:last'
 }
 
 @test "transform via duplicated argument to command" {
-    runWithInput $'first\nfoo\nfoo bar\nfoo\nbar\nlast' memoizeLines --command "argTransformer B{}-{}E"
-    [ $status -eq 0 ]
-    [ "$output" = "[Bfirst-firstE]
+    run -0 memoizeLines --command "argTransformer B{}-{}E" <<'EOF'
+first
+foo
+foo bar
+foo
+bar
+last
+EOF
+    assert_output - <<'EOF'
+[Bfirst-firstE]
 [Bfoo-fooE]
 [Bfoo bar-foo barE]
 [Bfoo-fooE]
 [Bbar-barE]
-[Blast-lastE]" ]
+[Blast-lastE]
+EOF
     assert_input "Bfirst-firstE
 Bfoo-fooE
 Bfoo bar-foo barE

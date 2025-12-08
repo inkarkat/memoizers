@@ -4,9 +4,9 @@ load fixture
 load delay
 
 @test "very verbose outdated cache entries get removed before evicting valid ones" {
-    runWithDelayInput foo 2 $'bar\nfoo' 1 $'third\nbar\nfoo' -- memoizeLines --verbose --verbose --for 2s --size 2 transformer
-    [ $status -eq 0 ]
-    [ "$output" = 'memoizeLines: Cache miss for "foo": [foo]
+    runWithDelayInput -0 foo 2 $'bar\nfoo' 1 $'third\nbar\nfoo' -- memoizeLines --verbose --verbose --for 2s --size 2 transformer
+    assert_output - <<'EOF'
+memoizeLines: Cache miss for "foo": [foo]
 [foo]
 memoizeLines: Cache miss for "bar": [bar]
 [bar]
@@ -20,5 +20,6 @@ memoizeLines: Cache hit for "bar": [bar]
 memoizeLines: Evicting "third"
 memoizeLines: Cache miss for "foo": [foo]
 [foo]
-memoizeLines: 6 lines, 2 cache hits (33%).' ]
+memoizeLines: 6 lines, 2 cache hits (33%).
+EOF
 }
