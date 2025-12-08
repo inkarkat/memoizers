@@ -3,30 +3,56 @@
 load fixture
 
 @test "special exit status on bar drops that line once" {
-    runWithInput $'first\nfoo\nbar\nfoo\nfoobar\nlast' memoizeLines --drop-on 99 --command failOnBarTransformer
-    [ $status -eq 0 ]
-    [ "$output" = "first
+    run -0 memoizeLines --drop-on 99 --command failOnBarTransformer <<'EOF'
+first
+foo
+bar
+foo
+foobar
+last
+EOF
+    assert_output - <<'EOF'
+first
 foo
 foo
-last" ]
+last
+EOF
     assert_input $'first\nfoo\nbar\nfoobar\nlast'
 }
 
 @test "different exit status on stuff still aborts" {
-    runWithInput $'first\nfoo\nbar\nfoo\nstuff\nlast' memoizeLines --drop-on 99 --command failOnBarTransformer --command 'sed "/stuff/q 42"'
-    [ $status -eq 42 ]
-    [ "$output" = "first
+    run -42 memoizeLines --drop-on 99 --command failOnBarTransformer --command 'sed "/stuff/q 42"' <<'EOF'
+first
 foo
-foo" ]
+bar
+foo
+stuff
+last
+EOF
+    assert_output - <<'EOF'
+first
+foo
+foo
+EOF
     assert_input $'first\nfoo\nbar\nstuff'
 }
 
 @test "special exit status on bar is cached, too" {
-    runWithInput $'first\nfoo\nbar\nfoo\nbar\nfoobar\nfoobar\nlast' memoizeLines --drop-on 99 --command failOnBarTransformer
-    [ $status -eq 0 ]
-    [ "$output" = "first
+    run -0 memoizeLines --drop-on 99 --command failOnBarTransformer <<'EOF'
+first
+foo
+bar
+foo
+bar
+foobar
+foobar
+last
+EOF
+    assert_output - <<'EOF'
+first
 foo
 foo
-last" ]
+last
+EOF
     assert_input $'first\nfoo\nbar\nfoobar\nlast'
 }

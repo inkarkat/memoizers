@@ -1,5 +1,7 @@
 #!/bin/bash
 
+load fixture
+
 delayInputWrapper()
 {
     typeset -a parts
@@ -19,5 +21,9 @@ delayInputWrapper()
 }
 runWithDelayInput()
 {
-    run delayInputWrapper "$@"
+    typeset -a runArg=()
+    if [ "$1" = '!' ] || [[ "$1" =~ ^-[0-9]+$ ]]; then
+	runArg=("$1"); shift
+    fi
+    run "${runArg[@]}" delayInputWrapper "$@"
 }

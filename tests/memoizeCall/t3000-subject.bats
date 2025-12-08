@@ -9,7 +9,6 @@ load temp_config
     firstOutput="$output"
 
     run memoizeCall --subject testSubject dummyCommand
-
-    [ "$firstStatus" = "$status" ]
-    [ "$firstOutput" = "$output" ]
+    assert_failure $firstStatus
+    assert_output "$firstOutput"
 }

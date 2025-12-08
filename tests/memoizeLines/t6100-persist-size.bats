@@ -3,47 +3,79 @@
 load persistence
 
 @test "persisted cache size 2" {
-    runWithInput $'foo\nfoo\nbar\nbar\nthird\nthird\nbar' memoizeLines --persist --size 2 transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[foo]
+    run -0 memoizeLines --persist --size 2 transformer <<'EOF'
+foo
+foo
+bar
+bar
+third
+third
+bar
+EOF
+    assert_output - <<'EOF'
+[foo]
 [foo]
 [bar]
 [bar]
 [third]
 [third]
-[bar]" ]
+[bar]
+EOF
     assert_input $'foo\nbar\nthird'
 
     clean_recorder
-    runWithInput $'foo\nbar\nthird\nfoo\nbar' memoizeLines --persist --size 2 transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[foo]
+    run -0 memoizeLines --persist --size 2 transformer <<'EOF'
+foo
+bar
+third
+foo
+bar
+EOF
+    assert_output - <<'EOF'
+[foo]
 [bar]
 [third]
 [foo]
-[bar]" ]
+[bar]
+EOF
     assert_input $'foo\nthird\nfoo\nbar'
 }
 
 @test "larger persisted cache of size 3 gets loaded with size 2 restriction" {
-    runWithInput $'foo\nfoo\nbar\nbar\nthird\nthird\nbar' memoizeLines --persist --size 3 transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[foo]
+    run -0 memoizeLines --persist --size 3 transformer <<'EOF'
+foo
+foo
+bar
+bar
+third
+third
+bar
+EOF
+    assert_output - <<'EOF'
+[foo]
 [foo]
 [bar]
 [bar]
 [third]
 [third]
-[bar]" ]
+[bar]
+EOF
     assert_input $'foo\nbar\nthird'
 
     clean_recorder
-    runWithInput $'foo\nbar\nthird\nfoo\nbar' memoizeLines --persist --size 2 transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[foo]
+    run -0 memoizeLines --persist --size 2 transformer <<'EOF'
+foo
+bar
+third
+foo
+bar
+EOF
+    assert_output - <<'EOF'
+[foo]
 [bar]
 [third]
 [foo]
-[bar]" ]
+[bar]
+EOF
     assert_input $'foo\nthird\nfoo\nbar'
 }

@@ -4,13 +4,14 @@ load fixture
 load delay
 
 @test "outdated cache entries get removed before evicting valid ones" {
-    runWithDelayInput foo 2 $'bar\nfoo' 1 $'third\nbar\nfoo' -- memoizeLines --for 2s --size 2 transformer
-    [ $status -eq 0 ]
-    [ "$output" = "[foo]
+    runWithDelayInput -0 foo 2 $'bar\nfoo' 1 $'third\nbar\nfoo' -- memoizeLines --for 2s --size 2 transformer
+    assert_output - <<'EOF'
+[foo]
 [bar]
 [foo]
 [third]
 [bar]
-[foo]" ]
+[foo]
+EOF
     assert_input $'foo\nbar\nthird\nfoo'
 }

@@ -10,10 +10,8 @@ load temp_config
     firstTestMessage="$testMessage"
     export testMessage='This is now different'
     export testStatus=11
-    run memoizeCall testCommand
-
-    [ $status -eq 0 ]
-    [ "$output" = "$firstTestMessage" ]
+    run -0 memoizeCall testCommand
+    assert_output "$firstTestMessage"
     assert_last "0 $firstTestMessage"
 }
 
@@ -25,35 +23,26 @@ load temp_config
     export testMessage='This is now different'
     export testStatus=11
 
-    run memoizeCall testCommand
-
-    [ $status -eq 0 ]
-    [ "$output" = "$firstTestMessage" ]
+    run -0 memoizeCall testCommand
+    assert_output "$firstTestMessage"
     assert_last "0 $firstTestMessage"
 
-    run memoizeCall dummyCommand
-
-    [ $status -eq 0 ]
-    [ "$output" = "Just a dummy" ]
+    run -0 memoizeCall dummyCommand
+    assert_output 'Just a dummy'
 }
 
 @test "different passing of command does not affect recording" {
     export testMessage='Just a simple command'
-    echo testCommand | memoizeCall
+    run -0 memoizeCall <<<'testCommand'
     firstTestMessage="$testMessage"
     export testMessage='This is now different'
     export testStatus=11
 
-    run memoizeCall testCommand
-
-    [ $status -eq 0 ]
-    [ "$output" = "$firstTestMessage" ]
+    run -0 memoizeCall testCommand
+    assert_output "$firstTestMessage"
     assert_last "0 $firstTestMessage"
 
-    run memoizeCall --command testCommand
-
-    [ $status -eq 0 ]
-    [ "$output" = "$firstTestMessage" ]
+    run -0 memoizeCall --command testCommand
+    assert_output "$firstTestMessage"
     assert_last "0 $firstTestMessage"
 }
-
