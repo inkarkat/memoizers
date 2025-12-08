@@ -1,15 +1,14 @@
 #!/usr/bin/env bats
 
-load common
+load fixture
 
 @test "when file is not created by the command, exits with 4" {
-    run memoizeFile --file "$FILE" -- true
-    [ $status -eq 4 ]
-    [ "$output" = "" ]
+    run -4 memoizeFile --file "$FILE" -- true
+    assert_output ''
 }
 
 @test "when file is not created by the command, verbose output says reason" {
-    run memoizeFile --verbose --file "$FILE" -- true
-    [[ "${lines[0]}" =~ /file\ does\ not\ exist\ yet\.$ ]]
-    [[ "${lines[1]}" =~ ^ERROR:\ .*/file\ was\ not\ updated\ as\ a\ side\ effect\ of\ executing\ COMMAND\.$ ]]
+    run -4 memoizeFile --verbose --file "$FILE" -- true
+    assert_line -n 0 -e '/file does not exist yet\.$'
+    assert_line -n 1 -e '^ERROR: .*/file was not updated as a side effect of executing COMMAND\.$'
 }

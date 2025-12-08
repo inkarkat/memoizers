@@ -1,22 +1,22 @@
 #!/usr/bin/env bats
 
-load common
+load fixture
 
 @test "non-existing file is created via standard input" {
-    runWithInput 'updated via standard input' memoizeFile --file "$FILE"
+    run -0 memoizeFile --file "$FILE" <<<'updated via standard input'
     assert_updates
-    [ "$output" = '' ]
+    assert_output ''
 }
 
 @test "existing file is not updated via standard input, which is ignored" {
     make_new
-    runWithInput 'updated via standard input' memoizeFile --file "$FILE"
+    run -0 memoizeFile --file "$FILE" <<<'updated via standard input'
     assert_not_updated
-    [ "$output" = '' ]
+    assert_output ''
 }
 
 @test "non-existing file is created via standard input, redirect is ignored" {
-    runWithInput 'updated via standard input' memoizeFile --redirect --file "$FILE"
+    run -0 memoizeFile --redirect --file "$FILE" <<<'updated via standard input'
     assert_updates
-    [ "$output" = '' ]
+    assert_output ''
 }

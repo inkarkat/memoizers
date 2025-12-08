@@ -1,23 +1,23 @@
 #!/usr/bin/env bats
 
-load common
+load fixture
 
 @test "non-existing file is created via redirection of simple command" {
-    run memoizeFile --redirect --file "$FILE" -- uname
-    assert_exists
-    [ "$output" = '' ]
+    run -0 memoizeFile --redirect --file "$FILE" -- uname
+    assert_file_exists "$FILE"
+    assert_output ''
 }
 
 @test "non-existing file is created via redirection of commandline" {
-    run memoizeFile --redirect --file "$FILE" --command 'echo updated via command-line'
-    assert_exists
+    run -0 memoizeFile --redirect --file "$FILE" --command 'echo updated via command-line'
+    assert_file_exists "$FILE"
     assert_updates
-    [ "$output" = '' ]
+    assert_output ''
 }
 
 @test "existing file is not updated via redirection of commandline" {
     make_new
-    run memoizeFile --redirect --file "$FILE" --command 'echo updated via command-line'
+    run -0 memoizeFile --redirect --file "$FILE" --command 'echo updated via command-line'
     assert_not_updated
-    [ "$output" = '' ]
+    assert_output ''
 }

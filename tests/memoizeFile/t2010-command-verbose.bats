@@ -1,16 +1,16 @@
 #!/usr/bin/env bats
 
-load common
+load fixture
 
 @test "message about non-existing file" {
-    run memoizeFile --verbose --file "$FILE" -- touch "$FILE"
-    assert_exists
-    [[ "$output" =~ /file\ does\ not\ exist\ yet\.$ ]]
+    run -0 memoizeFile --verbose --file "$FILE" -- touch "$FILE"
+    assert_file_exists "$FILE"
+    assert_output -e /file\ does\ not\ exist\ yet\.$
 }
 
 @test "message about existing file is not updated" {
     make_new
-    run memoizeFile --verbose --file "$FILE" --command 'echo updated via command-line > {}'
+    run -0 memoizeFile --verbose --file "$FILE" --command 'echo updated via command-line > {}'
     assert_not_updated
-    [[ "$output" =~ /file\ already\ exists\.$ ]]
+    assert_output -e /file\ already\ exists\.$
 }

@@ -1,4 +1,9 @@
-#/bin/bash
+#!/bin/bash
+
+bats_require_minimum_version 1.5.0
+bats_load_library bats-support
+bats_load_library bats-assert
+bats_load_library bats-file
 
 FILE="${BATS_TMPDIR}/file"
 
@@ -16,10 +21,6 @@ make_old()
     touch -m --date yesterday -- "$FILE"
 }
 
-assert_exists()
-{
-    [ -e "$FILE" ]
-}
 dump_updates()
 {
     printf >&3 '# Got %d update(s)\n' "$(grep -c '^update' "$FILE")"
@@ -31,14 +32,4 @@ assert_updates()
 assert_not_updated()
 {
     ! grep -q '^update' "$FILE"
-}
-
-inputWrapper()
-{
-    local input="$1"; shift
-    printf "%s${input:+\n}" "$input" | "$@"
-}
-runWithInput()
-{
-    run inputWrapper "$@"
 }
