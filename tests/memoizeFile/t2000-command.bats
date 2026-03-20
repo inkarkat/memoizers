@@ -14,6 +14,18 @@ load fixture
     assert_output ''
 }
 
+@test "non-existing file is created via exec" {
+    run -0 memoizeFile --file "$FILE" --exec touch "$FILE" \;
+    assert_file_exists "$FILE"
+    assert_output ''
+}
+
+@test "non-existing file is created via exec that uses the placeholder" {
+    run -0 memoizeFile --file "$FILE" --exec touch '{}' \;
+    assert_file_exists "$FILE"
+    assert_output ''
+}
+
 @test "non-existing file is created via commandline that uses the placeholder" {
     run -0 memoizeFile --file "$FILE" --command 'echo updated via command-line > {}'
     assert_file_exists "$FILE"

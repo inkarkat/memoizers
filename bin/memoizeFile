@@ -2,6 +2,7 @@
 shopt -qs extglob
 
 : ${MEMOIZEFILE_COMMAND_JOINER=;}
+: ${MEMOIZEFILE_EXEC_END=;}
 : ${MEMOIZEFILE_FILE_MARKER='{}'}
 fileMarker="$MEMOIZEFILE_FILE_MARKER"; unset MEMOIZEFILE_FILE_MARKER
 
@@ -11,7 +12,7 @@ printShortUsage()
     echo
     printf 'Usage: cat SOURCE-FILE [...] | %q %s\n' "$(basename "$1")" "..."
     echo
-    printf 'Usage: %q %s %s\n' "$(basename "$1")" "$commonArgs" '... [-r|--redirect] [--tee] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...]'
+    printf 'Usage: %q %s %s\n' "$(basename "$1")" "$commonArgs" "... [-r|--redirect] [--tee] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${MEMOIZEFILE_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...]"
 }
 printUsage()
 {
@@ -56,6 +57,11 @@ HELPDESCRIPTION
 			this is a simple command, it can also be passed as such.
 			${fileMarker:+Inside CMD, $fileMarker is replaced with FILE (so that you do not
 			need to specify it twice).}
+    --exec CMD [...] ${MEMOIZEFILE_EXEC_END}	Execute CMD to update the FILE; all following arguments
+			are taken to be arguments to the CMD until an argument
+			consisting of '${MEMOIZEFILE_EXEC_END}' is encountered. ${fileMarker:+Inside CMD, $fileMarker is
+			replaced with FILE (so that you do not need to specify
+			it twice).}
 EXIT STATUS:
     0	FILE exists (and is recent enough), or had to be updated and that
 	succeeded.
@@ -102,6 +108,22 @@ do
 	--tee)		shift; isTee=t; teeContents() { cat -- "${1:?}" || exit 3; };;
 	--timestamp|-T)	shift; now="$1"; shift;;
 	--command|-c)	shift; commands+="${commands:+ $MEMOIZEFILE_COMMAND_JOINER }$1"; shift;;
+	--exec)		shift
+			cmd=
+			printf -v escapedFileMarker %q "$fileMarker"
+			while [ $# -gt 0 -a "$1" != "$MEMOIZEFILE_EXEC_END" ]
+			do
+			    printf -v quotedArg %q "$1"
+			    cmd+="${cmd:+ }${quotedArg//"$escapedFileMarker"/$fileMarker}"	# %q escapes {}, we don't want that to have it interpolated later.
+			    shift
+			done
+			if [ $# -eq 0 ]; then
+			    echo "ERROR: --exec command must be concluded with '${MEMOIZEFILE_EXEC_END}'"; echo; printUsage "$0"
+			    exit 2
+			fi >&2
+			shift
+			commands+="${commands:+ $MEMOIZEFILE_COMMAND_JOINER }${cmd}"
+			;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;

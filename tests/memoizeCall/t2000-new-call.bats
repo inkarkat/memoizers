@@ -26,6 +26,12 @@ load temp_config
     assert_output "$testMessage"
 }
 
+@test "exec" {
+    export testMessage='Just a commandline'
+    run -0 memoizeCall --exec testCommand \;
+    assert_output "$testMessage"
+}
+
 @test "simple command returning failure" {
     export testMessage='Just a failing command'
     export testStatus=42

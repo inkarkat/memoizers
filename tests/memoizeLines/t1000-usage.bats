@@ -4,7 +4,7 @@ load fixture
 
 @test "no arguments prints message and usage instructions" {
     run -2 memoizeLines
-    assert_line -n 0 'ERROR: No COMMAND(s) specified; need to pass -c|--command "COMMANDLINE", or SIMPLECOMMAND.'
+    assert_line -n 0 'ERROR: No COMMAND(s) specified; need to pass -c|--command "COMMANDLINE", or --exec SIMPLECOMMAND [...] ; or SIMPLECOMMAND.'
     assert_line -n 1 -e '^Usage:'
 }
 

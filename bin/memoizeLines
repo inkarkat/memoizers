@@ -3,12 +3,13 @@ set -o pipefail
 shopt -qs extglob
 
 : ${MEMOIZELINES_COMMAND_JOINER=|}
+: ${MEMOIZELINES_EXEC_END=;}
 : ${MEMOIZELINES_ARG_MARKER='{}'}
 argMarker="$MEMOIZELINES_ARG_MARKER"; unset MEMOIZELINES_ARG_MARKER
 
 printShortUsage()
 {
-    printf 'Usage: cat SOURCE-FILE [...] | [MEMOIZELINES_FORCE_UPDATE=1|t|true|"LINE-GLOB"] %q %s\n' "$(basename "$1")" '[-v|--verbose [-v|--verbose]] [-s|--size N] [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH] [-w|--persist NAME [-i|--id ID]] [-d|--drop-on N] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+    printf 'Usage: cat SOURCE-FILE [...] | [MEMOIZELINES_FORCE_UPDATE=1|t|true|"LINE-GLOB"] %q %s\n' "$(basename "$1")" "[-v|--verbose [-v|--verbose]] [-s|--size N] [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH] [-w|--persist NAME [-i|--id ID]] [-d|--drop-on N] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${MEMOIZELINES_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
 }
 printUsage()
 {
@@ -60,6 +61,12 @@ HELPDESCRIPTION
 			line is read from standard output.
 			When this is a simple command, it can also be passed as
 			such.
+    --exec CMD [...] ${MEMOIZELINES_EXEC_END}	Execute CMD to transform a line; all following arguments
+			are taken to be arguments to the CMD until an argument
+			consisting of '${MEMOIZELINES_EXEC_END}' is encountered; ${argMarker:+inside CMD, $argMarker is
+			replaced with the line. Else,} the input is passed via
+			standard input. The transformed line is read from
+			standard output.
 EXIT STATUS:
     0	Lines either existed (and are recent enough), or had to be updated and
 	that succeeded.
@@ -105,6 +112,22 @@ do
 	--id|-i)	shift; id="$1"; shift;;
 	--drop-on|-d)	shift; dropOn="$1"; shift;;
 	--command|-c)	shift; commands+="${commands:+ $MEMOIZELINES_COMMAND_JOINER }$1"; shift;;
+	--exec)		shift
+			cmd=
+			printf -v escapedArgMarker %q "$argMarker"
+			while [ $# -gt 0 -a "$1" != "$MEMOIZELINES_EXEC_END" ]
+			do
+			    printf -v quotedArg %q "$1"
+			    cmd+="${cmd:+ }${quotedArg//"$escapedArgMarker"/$argMarker}"	# %q escapes {}, we don't want that to have it interpolated later.
+			    shift
+			done
+			if [ $# -eq 0 ]; then
+			    echo "ERROR: --exec command must be concluded with '${MEMOIZELINES_EXEC_END}'"; echo; printUsage "$0"
+			    exit 2
+			fi >&2
+			shift
+			commands+="${commands:+ $MEMOIZELINES_COMMAND_JOINER }${cmd}"
+			;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
@@ -114,11 +137,11 @@ if [ $# -ne 0 ]; then
     # Combine --command and SIMPLECOMMAND; need to quote SIMPLECOMMAND to
     # undo the effects of eval.
     printf -v quotedSimpleCommand '%q ' "$@"
-    printf -v escapedFileMarker %q "$argMarker"
-    commands+="${commands:+ $MEMOIZELINES_COMMAND_JOINER }${quotedSimpleCommand//"$escapedFileMarker"/$argMarker}"	# %q escapes {}, we don't want that to have it interpolated later.
+    printf -v escapedArgMarker %q "$argMarker"
+    commands+="${commands:+ $MEMOIZELINES_COMMAND_JOINER }${quotedSimpleCommand//"$escapedArgMarker"/$argMarker}"	# %q escapes {}, we don't want that to have it interpolated later.
 fi
 if [ -z "$commands" ]; then
-    echo 'ERROR: No COMMAND(s) specified; need to pass -c|--command "COMMANDLINE", or SIMPLECOMMAND.'
+    echo "ERROR: No COMMAND(s) specified; need to pass -c|--command \"COMMANDLINE\", or --exec SIMPLECOMMAND [...] $MEMOIZELINES_EXEC_END or SIMPLECOMMAND."
     echo
     printUsage "$0"
     exit 2
