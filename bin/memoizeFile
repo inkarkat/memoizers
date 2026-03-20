@@ -7,7 +7,7 @@ fileMarker="$MEMOIZEFILE_FILE_MARKER"; unset MEMOIZEFILE_FILE_MARKER
 
 printShortUsage()
 {
-    printf 'Usage: %q %s %s\n' "$(basename "$1")" '[-v|--verbose] -f|--file FILE [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH] [-?|-h|--help] ...'
+    printf 'Usage: [MEMOIZEFILE_FORCE_UPDATE=1|t|true|"FILE-GLOB"] %q %s %s\n' "$(basename "$1")" '[-v|--verbose] -f|--file FILE [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH] [-?|-h|--help] ...'
     echo
     printf 'Usage: cat SOURCE-FILE [...] | %q %s\n' "$(basename "$1")" "..."
     echo
@@ -122,6 +122,19 @@ if [ -z "$file" ]; then
 fi >&2
 
 
+isForcedUpdate()
+{
+    case "$MEMOIZEFILE_FORCE_UPDATE" in
+	'')	    return 1;;
+	1|t|true)   return 0;;
+	*)	    case "$file" in
+			@($MEMOIZEFILE_FORCE_UPDATE))	return 0;;
+			*)				return 1;;
+		    esac
+		    ;;
+    esac
+}
+
 update()
 {
     local quotedFile; printf -v quotedFile %q "$file"
@@ -136,7 +149,10 @@ getModificationEpoch()
 
 needsUpdate=
 fileModificationEpoch=-1
-if [ -e "$file" ]; then
+if isForcedUpdate; then
+    needsUpdate=t
+    [ "$isVerbose" ] && printf >&2 '%s will be updated because MEMOIZEFILE_FORCE_UPDATE is set.\n' "$file"
+elif [ -e "$file" ]; then
     if [ -n "$validity" ]; then
 	[ -n "$now" ] || now="$(date +%s)" || exit 3
 	fileModificationEpoch="$(getModificationEpoch "$file")" || exit 3

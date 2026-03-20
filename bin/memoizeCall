@@ -8,7 +8,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [MEMOIZECALL_EXTERNALIZE_OUTPUT_THRESHOLD=BYTES] %q %s\n' "$(basename "$1")" '[-t|--for VALID-TIMESPAN[SUFFIX]|second|minute|hour|day|week|month|year|every N (seconds|minutes|hours|days|weeks)] [--timestamp EPOCH] [-S|--successful-only] [-g|--memoize-group GROUP] [-s|--subject SUBJECT] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+    printf 'Usage: [MEMOIZECALL_EXTERNALIZE_OUTPUT_THRESHOLD=BYTES] [MEMOIZECALL_FORCE_UPDATE=1|t|true|"SUBJECT-GLOB"] %q %s\n' "$(basename "$1")" '[-t|--for VALID-TIMESPAN[SUFFIX]|second|minute|hour|day|week|month|year|every N (seconds|minutes|hours|days|weeks)] [--timestamp EPOCH] [-S|--successful-only] [-g|--memoize-group GROUP] [-s|--subject SUBJECT] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
     printf 'Usage: echo COMMANDLINES | %q %s\n' "$(basename "$1")" '[...] [-?|-h|--help]'
     printf 'Usage: %q %s <<EOF\n  COMMANDLINE\n...\nEOF\n' "$(basename "$1")" '[...]'
 }
@@ -96,6 +96,19 @@ marker()
     executionMarker --base-type data "${executionMarkerArgs[@]}" "$@"
 }
 
+isForcedUpdate()
+{
+    case "$MEMOIZECALL_FORCE_UPDATE" in
+	'')	    return 1;;
+	1|t|true)   return 0;;
+	*)	    case "$subject" in
+			@($MEMOIZECALL_FORCE_UPDATE))	return 0;;
+			*)				return 1;;
+		    esac
+		    ;;
+    esac
+}
+
 readonly CACHE_DIRSPEC="${XDG_CACHE_HOME:-${HOME}/.cache}/memoizeCall"
 writeExternalHashFile()
 {
@@ -117,7 +130,9 @@ readExternalHashFile()
     fi
 }
 
-if context="$(marker --query "$subject" ${validity:+--within "$validity"} --get-context)"; then
+if ! isForcedUpdate \
+    && context="$(marker --query "$subject" ${validity:+--within "$validity"} --get-context)"
+then
     exitStatus="${context%% *}"
     output="${context#* }"
 

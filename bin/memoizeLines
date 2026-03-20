@@ -8,7 +8,7 @@ argMarker="$MEMOIZELINES_ARG_MARKER"; unset MEMOIZELINES_ARG_MARKER
 
 printShortUsage()
 {
-    printf 'Usage: cat SOURCE-FILE [...] | %q %s\n' "$(basename "$1")" '[-v|--verbose [-v|--verbose]] [-s|--size N] [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH] [-w|--persist NAME [-i|--id ID]] [-d|--drop-on N] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+    printf 'Usage: cat SOURCE-FILE [...] | [MEMOIZELINES_FORCE_UPDATE=1|t|true|"LINE-GLOB"] %q %s\n' "$(basename "$1")" '[-v|--verbose [-v|--verbose]] [-s|--size N] [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH] [-w|--persist NAME [-i|--id ID]] [-d|--drop-on N] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
 }
 printUsage()
 {
@@ -261,6 +261,20 @@ transform()
     eval "$interpolatedCommands"
 }
 
+isForcedUpdate()
+{
+    local line="${1?}"; shift
+    case "$MEMOIZELINES_FORCE_UPDATE" in
+	'')	    return 1;;
+	1|t|true)   return 0;;
+	*)	    case "$line" in
+			@($MEMOIZELINES_FORCE_UPDATE))	return 0;;
+			*)				return 1;;
+		    esac
+		    ;;
+    esac
+}
+
 typeset -A cache=()
 typeset -A cacheTimestamps=()
 [ ! "$isPersist" ] || readCache || exit $?
@@ -273,7 +287,9 @@ do
     trackUsage "$lineKey"
 
     cacheStatus='Cache miss'
-    if getValidCachedResult "$lineKey"; then
+    if ! isForcedUpdate "$line" \
+	&& getValidCachedResult "$lineKey"
+    then
 	let cacheHits+=1
 	cacheStatus='Cache hit'
     else
