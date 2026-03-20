@@ -7,11 +7,11 @@ fileMarker="$MEMOIZEFILE_FILE_MARKER"; unset MEMOIZEFILE_FILE_MARKER
 
 printShortUsage()
 {
-    local commonArgs='[-v|--verbose] -f|--file FILE [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH]'
-
-    printf 'Usage: cat SOURCE-FILE [...] | %q %s\n' "$(basename "$1")" "$commonArgs"
+    printf 'Usage: %q %s %s\n' "$(basename "$1")" '[-v|--verbose] -f|--file FILE [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH] [-?|-h|--help] ...'
     echo
-    printf 'Usage: %q %s %s\n' "$(basename "$1")" "$commonArgs" '[-r|--redirect] [--tee] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]'
+    printf 'Usage: cat SOURCE-FILE [...] | %q %s\n' "$(basename "$1")" "..."
+    echo
+    printf 'Usage: %q %s %s\n' "$(basename "$1")" "$commonArgs" '... [-r|--redirect] [--tee] -c|--command "COMMANDLINE" [-c ...] | [--] SIMPLECOMMAND [...]'
 }
 printUsage()
 {
