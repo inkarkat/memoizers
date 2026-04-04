@@ -9,7 +9,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [MEMOIZECALL_EXTERNALIZE_OUTPUT_THRESHOLD=BYTES] [MEMOIZECALL_FORCE_UPDATE=1|t|true|"SUBJECT-GLOB"] %q %s\n' "$(basename "$1")" "[-t|--for VALID-TIMESPAN[SUFFIX]|second|minute|hour|day|week|month|year|every N (seconds|minutes|hours|days|weeks)] [--timestamp EPOCH] [-S|--successful-only] [-g|--memoize-group GROUP] [-s|--subject SUBJECT] -c|--command \"COMMANDLINE\" [-c ...] --exec SIMPLECOMMAND [...] ${MEMOIZECALL_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
+    printf 'Usage: [MEMOIZECALL_EXTERNALIZE_OUTPUT_THRESHOLD=BYTES] [MEMOIZECALL_FORCE_UPDATE=1|t|true|"[GROUP-GLOB/][SUBJECT-GLOB]"] %q %s\n' "$(basename "$1")" "[-t|--for VALID-TIMESPAN[SUFFIX]|second|minute|hour|day|week|month|year|every N (seconds|minutes|hours|days|weeks)] [--timestamp EPOCH] [-S|--successful-only] [-g|--memoize-group GROUP] [-s|--subject SUBJECT] -c|--command \"COMMANDLINE\" [-c ...] --exec SIMPLECOMMAND [...] ${MEMOIZECALL_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
     printf 'Usage: echo COMMANDLINES | %q %s\n' "$(basename "$1")" '[...] [-?|-h|--help]'
     printf 'Usage: %q %s <<EOF\n  COMMANDLINE\n...\nEOF\n' "$(basename "$1")" '[...]'
 }
@@ -120,6 +120,16 @@ isForcedUpdate()
     case "$MEMOIZECALL_FORCE_UPDATE" in
 	'')	    return 1;;
 	1|t|true)   return 0;;
+	*/*)	    groupGlob="${MEMOIZECALL_FORCE_UPDATE%/*}"
+		    subjectGlob="${MEMOIZECALL_FORCE_UPDATE##*/}"
+		    [ -n "$groupGlob" ] && case "$group" in
+			@($groupGlob))	    return 0;;
+		    esac
+		    [ -n "$subjectGlob" ] && case "$subject" in
+			@($subjectGlob))    return 0;;
+		    esac
+		    return 1
+		    ;;
 	*)	    case "$subject" in
 			@($MEMOIZECALL_FORCE_UPDATE))	return 0;;
 			*)				return 1;;
