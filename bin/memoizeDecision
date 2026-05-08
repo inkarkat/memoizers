@@ -27,24 +27,13 @@ shopt -qs extglob
 
 readonly FOREVER_EPOCH=4294967295
 
-timeToSeconds()
-{
-    case "$1" in
-	+([0-9])?(s))   time="${1%s}";;
-	+([0-9])m)	time=$((${1%m} * 60));;
-	+([0-9])h)	time=$((${1%h} * 3600));;
-	+([0-9])d)	time=$((${1%d} * 86400));;
-	*)		printf >&2 "ERROR: Illegal ${2:-timeout}: %s\\n" "$1"; exit 2;;
-    esac
-    printf %s "$time"
-}
 printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--recall-only]|([--timespan TIMESPAN[SUFFIX]] [--timeout TIMEOUT[SUFFIX]]) [-d|--default c|y|a|l|A|d|n|o|v|N] [--ephemeral [--any-key|--clear-prompt|--clear-all-prompt|--keep-prompt]] [-p|--print-decision] [-?|-h|--help]'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT [--verb VERB] -t|--state STATE -a|--action ACTION [--recall-only]|([--timespan TIMESPAN] [--timeout TIMEOUT]) [-d|--default c|y|a|l|A|d|n|o|v|N] [--ephemeral [--any-key|--clear-prompt|--clear-all-prompt|--keep-prompt]] [-p|--print-decision] [-?|-h|--help]'
     echo
-    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -c|--set-decision y|a|l|A|n|o|v|N [-a|--action ACTION] [--timespan TIMESPAN[SUFFIX]] [-p|--print-decision]'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT -c|--set-decision y|a|l|A|n|o|v|N [-a|--action ACTION] [--timespan TIMESPAN] [-p|--print-decision]'
     echo
     printf 'Usage: %q %s\n' "$(basename "$1")" '-g|--memoize-group GROUP -s|--subject SUBJECT --check|--has-decision|-q|--get-decision|-D|--delete-decision'
     echo
@@ -70,6 +59,7 @@ HELPDESCRIPTION
     echo
     printShortUsage "$1"
     echo
+    timespanFormat="$(durationToSeconds --get-short-usage format 2>/dev/null)"
     cat <<HELPTEXT
 If later (depending on the decision "soon" (within 15 minutes), or at any time)
 again called (with the same GROUP, depending on the decision for the same
@@ -85,7 +75,8 @@ MEMOIZEDECISION_CHOICE.
 				ACTION.
     --action|-a ACTION		What gets executed if the user answers
 				positively.
-    --timespan TIMESPAN[SUFFIX]	Recall a previous answer given for that GROUP
+    --timespan ${timespanFormat:-TIMESPAN}
+				Recall a previous answer given for that GROUP
 				and SUBJECT if a previous invocation (with an
 				answer of yes/any/no/none) had happened within
 				TIMESPAN (default ${MEMOIZEDECISION_VALID_TIMESPAN_SECONDS} seconds).
@@ -93,7 +84,8 @@ MEMOIZEDECISION_CHOICE.
 				for minutes, 'h' for hours or 'd' for days.
     --recall-only		Do not query the user; just return a previous
 				answer / the passed default.
-    --timeout TIMEOUT[SUFFIX]	Do not wait indefinitely for the user's answer,
+    --timeout ${timespanFormat:-TIMEOUT}
+				Do not wait indefinitely for the user's answer,
 				but abort / use the --default instead after
 				TIMEOUT have passed without an answer.
     --default|-d confirm-each|c|yes|y|any|a|always|l|any-always|A|decline-each|d|no|n|none|o|never|v|none-never|N
@@ -108,7 +100,7 @@ MEMOIZEDECISION_CHOICE.
     --set-decision|-c yes|y|any|a|always|l|any-always|A|no|n|none|o|never|v|none-never|N
 				Instead of querying, use the passed decision as
 				if the user had chosen it (for --timespan
-				TIMEOUT for y|a|n|o). If ACTION is passed, a
+				TIMESPAN for y|a|n|o). If ACTION is passed, a
 				corresponding information message is printed;
 				without it, the decision is consumed silently.
     --check			Just check for a decision for SUBJECT; succeed
@@ -183,9 +175,9 @@ do
 	--verb)			shift; verb="$1"; shift;;
 	--state|-t)		shift; state="$1"; shift;;
 	--action|-a)		shift; action="$1"; shift;;
-	--timespan)		shift; MEMOIZEDECISION_VALID_TIMESPAN_SECONDS="$(timeToSeconds "$1" timespan)" || exit $?; shift;;
+	--timespan)		shift; MEMOIZEDECISION_VALID_TIMESPAN_SECONDS="$(durationToSeconds -- "${1:?}")" || { printf >&2 'ERROR: Illegal timespan: %s\n' "$1"; exit 2; }; shift;;
 	--recall-only)	shift; isRecallOnly=t;;
-	--timeout)	shift; timeInSeconds="$(timeToSeconds "$1" timeout)" || exit $?; shift
+	--timeout)	shift; timeInSeconds="$(durationToSeconds -- "${1:?}")" || { printf >&2 'ERROR: Illegal timeout: %s\n' "$1"; exit 2; }; shift
 			timeoutPlural=s; [ "$timeInSeconds" = 1 ] && timeoutPlural=; timeout="Within $timeInSeconds second${timeoutPlural}: "; readArgs+=(-t "$timeInSeconds")
 			;;
 	--default|-d)	shift; if assertValidChoice "$1"; then
