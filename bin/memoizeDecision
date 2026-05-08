@@ -376,7 +376,7 @@ setDecision()
 
 getTimespanDuration()
 {
-    reldate "$@" --timespan "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" 2>/dev/null || printf '%d seconds' "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS"
+    datediff --seconds "$MEMOIZEDECISION_VALID_TIMESPAN_SECONDS" --output best-unit --no-direction
 }
 
 processChoice()
