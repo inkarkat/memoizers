@@ -183,7 +183,7 @@ clearOutdated()
     do
 	local cacheTime="${cacheTimestamps["$key"]}"
 	if [ $((${now:-$SECONDS} - cacheTime)) -gt $validity ]; then
-	    unset cache["$key"] cacheTimestamps["$key"]
+	    unset "cache[$key]" "cacheTimestamps[$key]"
 	    deleteUse "$key"
 	    [ ! "$isVeryVerbose" ] || printf >&2 '%s: Evicting outdated "%s"\n' "$scriptName" "${key//$'\n'/}"
 	fi
@@ -197,7 +197,7 @@ deleteUse()
     local u; for u in "${!uses[@]}"
     do
 	if [ "${uses["$u"]}" = "$key" ]; then
-	    unset uses["$u"]
+	    unset "uses[$u]"
 	    break
 	fi
     done
@@ -234,7 +234,7 @@ manageCacheSize()
 	do
 	    uses=("${uses[@]}")
 	    local evictedKey="${uses[*]:0:1}"
-	    unset cache["$evictedKey"] cacheTimestamps["$evictedKey"]
+	    unset "cache[$evictedKey]" "cacheTimestamps[$evictedKey]"
 	    uses=("${uses[@]:1}")
 
 	    [ ! "$isVeryVerbose" ] || printf >&2 '%s: Evicting "%s"\n' "$scriptName" "${evictedKey//$'\n'/}"
