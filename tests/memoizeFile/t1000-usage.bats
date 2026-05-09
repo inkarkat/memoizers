@@ -16,5 +16,6 @@ load fixture
 
 @test "complains about illegal timespan" {
     run -2 memoizeFile --for whatever --file /dev/null
-    assert_output 'ERROR: Illegal timespan: whatever'
+    assert_line -n 0 'ERROR: Illegal TIMESPAN or TIMESLOT: whatever'
+    assert_line -n 1 -e '^Usage:'
 }
