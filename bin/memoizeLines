@@ -105,7 +105,7 @@ do
 			    *)		    printf >&2 'ERROR: Illegal timespan: %s\n' "$1"; exit 2;;
 			esac
 			shift
-			SECONDS="$(date +%s)" || exit 3
+			SECONDS=$(printf '%(%s)T' -1)
 			;;
 	--timestamp|-T)	shift; now="$1"; shift;;
 	--persist|-w)	shift; isPersist=t; onExit+=(writeCache);;
