@@ -8,11 +8,11 @@ fileMarker="$MEMOIZEFILE_FILE_MARKER"; unset MEMOIZEFILE_FILE_MARKER
 
 printShortUsage()
 {
-    printf 'Usage: [MEMOIZEFILE_FORCE_UPDATE=1|t|true|"FILE-GLOB"] %q %s %s\n' "$(basename "$1")" '[-v|--verbose] -f|--file FILE [-t|--timeout|--for TIMESPAN|TIMESLOT] [-T|--timestamp EPOCH] [-?|-h|--help] ...'
+    printf 'Usage: [MEMOIZEFILE_FORCE_UPDATE=1|t|true|"FILE-GLOB"] %q %s\n' "$(basename "$1")" '[-v|--verbose] -f|--file FILE [-t|--timeout|--for TIMESPAN|TIMESLOT] [-T|--timestamp EPOCH] [-?|-h|--help] ...'
     echo
     printf 'Usage: cat SOURCE-FILE [...] | %q %s\n' "$(basename "$1")" "..."
     echo
-    printf 'Usage: %q %s %s\n' "$(basename "$1")" "$commonArgs" "... [-r|--redirect] [--tee] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${MEMOIZEFILE_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...]"
+    printf 'Usage: %q %s\n' "$(basename "$1")" "... [-r|--redirect] [--tee] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${MEMOIZEFILE_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...]"
 }
 printUsage()
 {
