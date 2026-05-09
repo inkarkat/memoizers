@@ -9,7 +9,7 @@ argMarker="$MEMOIZELINES_ARG_MARKER"; unset MEMOIZELINES_ARG_MARKER
 
 printShortUsage()
 {
-    printf 'Usage: cat SOURCE-FILE [...] | [MEMOIZELINES_FORCE_UPDATE=1|t|true|"LINE-GLOB"] %q %s\n' "$(basename "$1")" "[-v|--verbose [-v|--verbose]] [-s|--size N] [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH] [-w|--persist NAME [-i|--id ID]] [-d|--drop-on N] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${MEMOIZELINES_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
+    printf 'Usage: cat SOURCE-FILE [...] | [MEMOIZELINES_FORCE_UPDATE=1|t|true|"LINE-GLOB"] %q %s\n' "$(basename "$1")" "[-v|--verbose [-v|--verbose]] [-s|--size N] [-t|--timeout|--for TIMESPAN|TIMESLOT] [-T|--timestamp EPOCH] [-w|--persist NAME [-i|--id ID]] [-d|--drop-on N] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${MEMOIZELINES_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
 }
 printUsage()
 {
@@ -24,7 +24,7 @@ printLongUsage()
     # It is printed to stdout to allow paging with 'more'.
     cat <<HELPDESCRIPTION
 Read lines from standard input; if a line has not yet been seen or its last
-processing is older than VALID-TIMESPAN, transform it through COMMAND, return
+processing is older than TIMESPAN|TIMESLOT, transform it through COMMAND, return
 its output, and store that output for future occurences of that line (which will
 then bypass the transformation through COMMAND and directly return the stored
 output again).
@@ -39,14 +39,11 @@ HELPDESCRIPTION
 			cache. Least recently used ones will be evicted. A size
 			of 0 completely disables memoization, so each line will
 			cause a transformation.
-    --timeout|-t|--for VALID-TIMESPAN[SUFFIX]
+    --timeout|-t|--for $(datediff --get-short-usage newer-older-parameters 2>/dev/null || echo 'TIMESPAN|TIMESLOT')
 			If the last transformation of a line is older, execute
-			COMMAND to transform the line. VALID-TIMESPAN is
-			NUMBER[SUFFIX], where SUFFIX may be 's' for seconds (the
-			default), 'm' for minutes, 'h' for hours or 'd' for
-			days.
+			COMMAND to transform the line.
     --timestamp|-T EPOCH
-			Use EPOCH instead of the current time.
+			Compare against EPOCH instead of the current time.
     --persist|-w	Keep the memoizations across invocations. A previous
 			cache is read on startup, and the cache is written back
 			when there's no more input to process.
@@ -82,7 +79,7 @@ printf '%s | %q %s\n' "repeat -n 10 -c 'echo \$((RANDOM %6))'" "$(basename "$1")
 isVerbose=
 isVeryVerbose=
 size=
-validity=
+validityInterval=
 isPersist=
 id=
 dropOn=
@@ -96,16 +93,9 @@ do
 	--verbose|-v)	shift; [ "$isVerbose" ] && isVeryVerbose=t || onExit+=(printCacheStatistics); isVerbose=t;;
 	--size|-s)	shift; size="$1"; shift;;
 	--timeout|-t|--for)
-			shift
-			case "$1" in
-			    +([0-9])?(s))   validity="${1%s}";;
-			    +([0-9])m)	    validity=$((${1%m} * 60));;
-			    +([0-9])h)	    validity=$((${1%h} * 3600));;
-			    +([0-9])d)	    validity=$((${1%d} * 86400));;
-			    *)		    printf >&2 'ERROR: Illegal timespan: %s\n' "$1"; exit 2;;
-			esac
-			shift
+			shift; validityInterval="$1"; shift
 			SECONDS=$(printf '%(%s)T' -1)
+			datediff --older "$validityInterval" -- "@$SECONDS"; [ $? -eq 2 ] && exit 2 # Validate with a dummy diff as the actual invocations happen too late during processing.
 			;;
 	--timestamp|-T)	shift; now="$1"; shift;;
 	--persist|-w)	shift; isPersist=t; onExit+=(writeCache);;
@@ -166,9 +156,9 @@ getValidCachedResult()
     local key="${1:?}"; shift
     [ -n "${cache["$key"]+t}" ] || return 1
 
-    if [ -n "$validity" ]; then
+    if [ -n "$validityInterval" ]; then
 	local cacheTime="${cacheTimestamps["$key"]}"
-	if [ $((${now:-$SECONDS} - cacheTime)) -gt $validity ]; then
+	if datediff --older "$validityInterval" -- ${now:+"@$now"} "@$cacheTime"; then
 	    cacheStatus='Outdated cache entry'
 	    return 1
 	fi
@@ -182,7 +172,7 @@ clearOutdated()
     local key; for key in "${!cacheTimestamps[@]}"
     do
 	local cacheTime="${cacheTimestamps["$key"]}"
-	if [ $((${now:-$SECONDS} - cacheTime)) -gt $validity ]; then
+	if datediff --older "$validityInterval" -- ${now:+"@$now"} "@$cacheTime"; then
 	    unset "cache[$key]" "cacheTimestamps[$key]"
 	    deleteUse "$key"
 	    [ ! "$isVeryVerbose" ] || printf >&2 '%s: Evicting outdated "%s"\n' "$scriptName" "${key//$'\n'/}"
@@ -225,7 +215,7 @@ manageCacheSize()
 	cache=()
 	cacheTimestamps=()
     else
-	if [ -n "$validity" -a ${#uses[@]} -gt $size ]; then
+	if [ -n "$validityInterval" -a ${#uses[@]} -gt $size ]; then
 	    # Remove expired cache entries before evicting still valid ones.
 	    clearOutdated
 	fi
@@ -274,7 +264,7 @@ writeCache()
     local cacheFilespec; cacheFilespec="$(getCacheFilespec)" || return $?
     {
 	typeset -p cache
-	[ -z "$validity" ] || typeset -p cacheTimestamps
+	[ -z "$validityInterval" ] || typeset -p cacheTimestamps
 	[ -z "$size" -o "$size" = 0 ] || typeset -p uses
     } | sed -e 's#^declare #&-g #' > "$cacheFilespec"	# The sourcing is done inside a function, so "declare -g" must be used to define the variables with global scope.
 }
@@ -338,7 +328,7 @@ do
 	if [ "$size" != 0 ]; then
 	    manageCacheSize
 	    cache["$lineKey"]="$result"
-	    [ -z "$validity" ] || cacheTimestamps["$lineKey"]=${now:-$SECONDS}
+	    [ -z "$validityInterval" ] || cacheTimestamps["$lineKey"]=${now:-$SECONDS}
 	fi
     fi
 
