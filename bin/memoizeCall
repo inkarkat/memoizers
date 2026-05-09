@@ -9,7 +9,7 @@ printShortUsage()
 {
     # Note: short followed by long option; if the user knows the short one, she can
     # skim the long one.
-    printf 'Usage: [MEMOIZECALL_EXTERNALIZE_OUTPUT_THRESHOLD=BYTES] [MEMOIZECALL_FORCE_UPDATE=1|t|true|"[GROUP-GLOB/][SUBJECT-GLOB]"] %q %s\n' "$(basename "$1")" "[-t|--for AGE[SUFFIX]|TIMESLOT] [--timestamp EPOCH] [-S|--successful-only] [-g|--memoize-group GROUP] [-s|--subject SUBJECT] -c|--command \"COMMANDLINE\" [-c ...] --exec SIMPLECOMMAND [...] ${MEMOIZECALL_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
+    printf 'Usage: [MEMOIZECALL_EXTERNALIZE_OUTPUT_THRESHOLD=BYTES] [MEMOIZECALL_FORCE_UPDATE=1|t|true|"[GROUP-GLOB/][SUBJECT-GLOB]"] %q %s\n' "$(basename "$1")" "[-t|--timeout|--for TIMESPAN|TIMESLOT] [--timestamp EPOCH] [-S|--successful-only] [-g|--memoize-group GROUP] [-s|--subject SUBJECT] -c|--command \"COMMANDLINE\" [-c ...] --exec SIMPLECOMMAND [...] ${MEMOIZECALL_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...] [-?|-h|--help]"
     printf 'Usage: echo COMMANDLINES | %q %s\n' "$(basename "$1")" '[...] [-?|-h|--help]'
     printf 'Usage: %q %s <<EOF\n  COMMANDLINE\n...\nEOF\n' "$(basename "$1")" '[...]'
 }
@@ -33,7 +33,7 @@ HELPDESCRIPTION
     printShortUsage "$1"
     echo
     cat <<HELPTEXT
-    --for|-t $(datediff --get-short-usage newer-older-parameters 2>/dev/null || echo 'AGE[SUFFIX]|TIMESLOT')
+    --timeout|-t|--for $(datediff --get-short-usage newer-older-parameters 2>/dev/null || echo 'TIMESPAN|TIMESLOT')
 			Limit the validity of the memoized command's exit status
 			and output. After that time, the command will be
 			re-executed again.
