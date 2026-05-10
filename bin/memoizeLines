@@ -158,7 +158,7 @@ getValidCachedResult()
 
     if [ -n "$validityInterval" ]; then
 	local cacheTime="${cacheTimestamps["$key"]}"
-	if datediff --older "$validityInterval" -- ${now:+"@$now"} "@$cacheTime"; then
+	if lastUpdateTime="$(datediff --older "$validityInterval" ${isVerbose:+--always-output --output precise --long-units} -- ${now:+"@$now"} "@$cacheTime")"; then
 	    cacheStatus='Outdated cache entry'
 	    return 1
 	fi
@@ -172,10 +172,10 @@ clearOutdated()
     local key; for key in "${!cacheTimestamps[@]}"
     do
 	local cacheTime="${cacheTimestamps["$key"]}"
-	if datediff --older "$validityInterval" -- ${now:+"@$now"} "@$cacheTime"; then
+	if lastUpdateTime="$(datediff --older "$validityInterval" ${isVerbose:+--always-output --output precise --long-units} -- ${now:+"@$now"} "@$cacheTime")"; then
 	    unset "cache[$key]" "cacheTimestamps[$key]"
 	    deleteUse "$key"
-	    [ ! "$isVeryVerbose" ] || printf >&2 '%s: Evicting outdated "%s"\n' "$scriptName" "${key//$'\n'/}"
+	    [ ! "$isVeryVerbose" ] || printf >&2 '%s: Evicting outdated "%s"; last update was %s.\n' "$scriptName" "${key//$'\n'/}" "$lastUpdateTime"
 	fi
     done
 }
@@ -299,7 +299,7 @@ do
     lineKey="${line:-$'\n'}"	# Empty key is not allowed in associative array; use newline instead, as it cannot occur in the input.
     trackUsage "$lineKey"
 
-    cacheStatus='Cache miss'
+    cacheStatus='Cache miss'; lastUpdateTime=''
     if ! isForcedUpdate "$line" \
 	&& getValidCachedResult "$lineKey"
     then
@@ -333,9 +333,9 @@ do
     fi
 
     if [ "$result" = "$DROP_VALUE" ]; then
-	[ ! "$isVeryVerbose" ] || printf >&2 '%s: %s for "%s" (dropped input line)\n' "$scriptName" "$cacheStatus" "$line"
+	[ ! "$isVeryVerbose" ] || printf >&2 '%s: %s for "%s"%s (dropped input line)\n' "$scriptName" "$cacheStatus" "$line" "${lastUpdateTime:+; last update was $lastUpdateTime}"
     else
-	[ ! "$isVeryVerbose" ] || printf >&2 '%s: %s for "%s": %s\n' "$scriptName" "$cacheStatus" "$line" "$result"
+	[ ! "$isVeryVerbose" ] || printf >&2 '%s: %s for "%s"%s: %s\n' "$scriptName" "$cacheStatus" "$line" "${lastUpdateTime:+; last update was $lastUpdateTime}" "$result"
 	printf "%s${isEOL:+$'\n'}" "$result"
     fi
 done

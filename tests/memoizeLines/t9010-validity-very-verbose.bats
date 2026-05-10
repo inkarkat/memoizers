@@ -8,17 +8,17 @@ load delay
     assert_output - <<'EOF'
 memoizeLines: Cache miss for "foo": [foo]
 [foo]
-memoizeLines: Cache hit for "foo": [foo]
+memoizeLines: Cache hit for "foo"; last update was just now: [foo]
 [foo]
 memoizeLines: Cache miss for "bar": [bar]
 [bar]
-memoizeLines: Cache hit for "foo": [foo]
+memoizeLines: Cache hit for "foo"; last update was just now: [foo]
 [foo]
-memoizeLines: Outdated cache entry for "foo": [foo]
+memoizeLines: Outdated cache entry for "foo"; last update was 2 seconds ago: [foo]
 [foo]
 memoizeLines: Cache miss for "": []
 []
-memoizeLines: Outdated cache entry for "bar": [bar]
+memoizeLines: Outdated cache entry for "bar"; last update was 2 seconds ago: [bar]
 [bar]
 memoizeLines: 7 lines, 2 cache hits (28%).
 EOF
