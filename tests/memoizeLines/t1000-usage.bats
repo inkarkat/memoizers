@@ -15,6 +15,7 @@ load fixture
 }
 
 @test "complains about illegal timespan" {
-    run -2 memoizeLines --for whatever --verbose
-    assert_output 'ERROR: Illegal timespan: whatever'
+    run -2 memoizeLines --for whatever --verbose --command uname
+    assert_line -n 0 'ERROR: Illegal TIMESPAN or TIMESLOT: whatever'
+    assert_line -n 1 -e '^Usage:'
 }

@@ -8,11 +8,11 @@ fileMarker="$MEMOIZEFILE_FILE_MARKER"; unset MEMOIZEFILE_FILE_MARKER
 
 printShortUsage()
 {
-    printf 'Usage: [MEMOIZEFILE_FORCE_UPDATE=1|t|true|"FILE-GLOB"] %q %s %s\n' "$(basename "$1")" '[-v|--verbose] -f|--file FILE [-t|--timeout|--for VALID-TIMESPAN[SUFFIX]] [-T|--timestamp EPOCH] [-?|-h|--help] ...'
+    printf 'Usage: [MEMOIZEFILE_FORCE_UPDATE=1|t|true|"FILE-GLOB"] %q %s\n' "$(basename "$1")" '[-v|--verbose] -f|--file FILE [-t|--timeout|--for TIMESPAN|TIMESLOT] [-T|--timestamp EPOCH] [-?|-h|--help] ...'
     echo
     printf 'Usage: cat SOURCE-FILE [...] | %q %s\n' "$(basename "$1")" "..."
     echo
-    printf 'Usage: %q %s %s\n' "$(basename "$1")" "$commonArgs" "... [-r|--redirect] [--tee] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${MEMOIZEFILE_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...]"
+    printf 'Usage: %q %s\n' "$(basename "$1")" "... [-r|--redirect] [--tee] -c|--command \"COMMANDLINE\" [-c ...] | --exec SIMPLECOMMAND [...] ${MEMOIZEFILE_EXEC_END} [--exec ...] | [--] SIMPLECOMMAND [...]"
 }
 printUsage()
 {
@@ -26,7 +26,7 @@ printLongUsage()
     # This is the long "man page" when launched with the help argument.
     # It is printed to stdout to allow paging with 'more'.
     cat <<HELPDESCRIPTION
-If FILE does not exist or its last modification is older than VALID-TIMESPAN,
+If FILE does not exist or its last modification is older than TIMESPAN|TIMESLOT,
 execute COMMAND / take the input from standard input to update the FILE.
 HELPDESCRIPTION
     echo
@@ -35,13 +35,9 @@ HELPDESCRIPTION
     cat <<HELPTEXT
     --verbose|-v	Print additional information about the FILE state.
     --file|-f FILE	The target filespec to check and potentially update.
-    --timeout|-t|--for VALID-TIMESPAN[SUFFIX]
+    --timeout|-t|--for $(datediff --get-short-usage newer-older-parameters 2>/dev/null || echo 'TIMESPAN|TIMESLOT')
 			If the last modification of FILE is older, execute
-			COMMAND to update the FILE. VALID-TIMESPAN is
-			NUMBER[SUFFIX], where SUFFIX may be 's' for seconds (the
-			default), 'm' for minutes, 'h' for hours, 'd' for days,
-			'w' for weeks, 'mo' for months, 'y' for years, 'g' for
-			generations.
+			COMMAND to update the FILE.
     --redirect|-r	Directly redirect standard output of COMMAND into FILE
 			(if the command succeeds). Saves you from including the
 			redirection in COMMANDLINE and makes it possible to use
@@ -51,7 +47,7 @@ HELPDESCRIPTION
 			get you latest standard input not yet memoized in the
 			FILE).
     --timestamp|-T EPOCH
-			Use EPOCH instead of the current time.
+			Compare against EPOCH instead of the current time.
     --command|-c CMD	The command line to be executed to update the FILE (as a
 			side effect, or by redirecting its output into it). When
 			this is a simple command, it can also be passed as such.
@@ -79,7 +75,7 @@ isTee=
 teeContents() { :; }
 isVerbose=
 file=
-validity=
+validityInterval=
 isRedirect=
 now=
 commands=
@@ -90,20 +86,7 @@ do
 	--verbose|-v)	shift; isVerbose=t;;
 	--file|-f)	shift; file="$1"; shift;;
 	--timeout|-t|--for)
-			shift
-			case "$1" in
-			    +([0-9])?(s))   validity="${1%s}";;
-			    +([0-9])m)	    validity=$((${1%m} * 60));;
-			    +([0-9])h)	    validity=$((${1%h} * 3600));;
-			    +([0-9])d)	    validity=$((${1%d} * 86400));;
-			    +([0-9])w)	    validity=$((${1%w} * 86400 * 7));;
-			    +([0-9])mo)	    validity=$((${1%mo} * 86400 * 30));;
-			    +([0-9])y)	    validity=$((${1%y} * 86400 * 365));;
-			    +([0-9])g)	    validity=$((${1%g} * 86400 * 9131));;
-			    *)		    printf >&2 'ERROR: Illegal timespan: %s\n' "$1"; exit 2;;
-			esac
-			shift
-			;;
+			shift; validityInterval="$1"; shift;;
 	--redirect|-r)	shift; isRedirect=t;;
 	--tee)		shift; isTee=t; teeContents() { cat -- "${1:?}" || exit 3; };;
 	--timestamp|-T)	shift; now="$1"; shift;;
@@ -175,16 +158,18 @@ if isForcedUpdate; then
     needsUpdate=t
     [ "$isVerbose" ] && printf >&2 '%s will be updated because MEMOIZEFILE_FORCE_UPDATE is set.\n' "$file"
 elif [ -e "$file" ]; then
-    if [ -n "$validity" ]; then
-	[ -n "$now" ] || now="$(date +%s)" || exit 3
+    if [ -n "$validityInterval" ]; then
 	fileModificationEpoch="$(getModificationEpoch "$file")" || exit 3
-
-	[ $((fileModificationEpoch + validity)) -ge "$now" ] || needsUpdate=t
+	lastUpdateTime="$(datediff --older "$validityInterval" ${isVerbose:+--always-output --output precise --long-units} -- ${now:+"@$now"} "@$fileModificationEpoch")"
+	case $? in
+	    0) needsUpdate=t;;
+	    2) exit 2;;
+	esac
 
 	[ "$isVerbose" ] && if [ "$needsUpdate" ]; then
-	    printf >&2 '%s needs an update; last update was %d second(s) ago.\n' "$file" "$((now - fileModificationEpoch))"
+	    printf >&2 '%s needs an update; last update was %s.\n' "$file" "$lastUpdateTime"
 	else
-	    printf >&2 '%s does not need an update yet; last update was %d second(s) ago.\n' "$file" "$((now - fileModificationEpoch))"
+	    printf >&2 '%s does not need an update yet; last update was %s.\n' "$file" "$lastUpdateTime"
 	fi
     else
 	[ "$isVerbose" ] && printf >&2 '%s already exists.\n' "$file"
