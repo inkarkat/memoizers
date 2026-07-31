@@ -203,7 +203,7 @@ if [ "$isRedirect" ]; then
     {
 	rm -f -- "$TMPFILE" 2>/dev/null
     }
-    [ "${DEBUG:-}" ] || trap 'cleanup' EXIT
+    ! ${DEBUG:+debugenabled --invert-match --} ${DEBUG:-:} || trap 'cleanup' EXIT
 
     update > "$TMPFILE"; status=$?
     if [ $status -eq 0 ]; then
