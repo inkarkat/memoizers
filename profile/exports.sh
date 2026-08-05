@@ -1,1 +1,1 @@
-IFS='|' optionmunge export COMMANDNAME_WRAPPERS memoizeCall memoizeFile
+optionmunge -s '|' export COMMANDNAME_WRAPPERS memoizeCall memoizeFile
