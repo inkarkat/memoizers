@@ -199,11 +199,7 @@ fi
 
 if [ "$isRedirect" ]; then
     TMPFILE="$(mktemp --tmpdir "$(basename -- "$0")-XXXXXX" 2>/dev/null || echo "${TMPDIR:-/tmp}/$(basename -- "$0").$$$RANDOM")"
-    cleanup()
-    {
-	rm -f -- "$TMPFILE" 2>/dev/null
-    }
-    ! ${DEBUG:+debugenabled --invert-match --} ${DEBUG:-:} || trap 'cleanup' EXIT
+    trap '${DEBUG:+debugcommand --} rm -f -- "$TMPFILE" 2>/dev/null' EXIT
 
     update > "$TMPFILE"; status=$?
     if [ $status -eq 0 ]; then
