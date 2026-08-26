@@ -17,11 +17,11 @@ load temp_config
 @test "different groups make identical commands memoize to different results" {
     export testStatus=42
     export testMessage='variant in group A'
-    run memoizeCall testCommand
+    run memoizeCall --memoize-group testGroupA testCommand
 
     export testStatus=88
     export testMessage='variant in group B'
-    run memoizeCall --memoize-group testGroup testCommand
+    run memoizeCall --memoize-group testGroupB testCommand
     assert_failure $testStatus
     assert_output "$testMessage"
 }
