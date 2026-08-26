@@ -110,11 +110,16 @@ if [ -z "$commands" ]; then
     commands="$(< /dev/stdin)"
 fi
 if [ -z "$commands" ]; then
-    echo >&2 'ERROR: No COMMAND.'
-    echo >&2
-    printUsage "$0" >&2
+    echo 'ERROR: No COMMAND.'
+    echo
+    printUsage "$0"
     exit 2
-fi
+elif [ -n "$subject" -a -n "$commandContext" ]; then
+    echo 'ERROR: Cannot combine -s|--subject with -C|--context.'
+    echo
+    printUsage "$0"
+    exit 2
+fi >&2
 
 : ${subject:=${commands}${commandContext}}
 if [ -n "$group" ]; then
