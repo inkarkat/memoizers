@@ -40,6 +40,11 @@ HELPDESCRIPTION
     --successful-only|-S
 			Skip recording for failed commands so that the next
 			invocation will retry the command.
+    --memoize-group|-g GROUP
+			Category under which the memoized command is stored.
+    --subject|-s SUBJECT
+			Use SUBJECT instead of COMMAND as the key for
+			memoization.
     --exec CMD [...] ${MEMOIZECALL_EXEC_END}	Execute CMD; all following arguments are taken to be
 			arguments to the CMD until an argument consisting of
 			'${MEMOIZECALL_EXEC_END}' is encountered.
