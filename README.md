@@ -10,7 +10,7 @@ _Commands that record and recall contents, command outputs, user choices, etc._
 * [inkarkat/executionMarker](https://github.com/inkarkat/executionMarker) for the `memoizeCall` and `memoizeDecision` commands
 * [inkarkat/shell-filters](https://github.com/inkarkat/shell-filters)
 * [inkarkat/shell-debugging](https://github.com/inkarkat/shell-debugging) for debugging (optional)
-* automated testing is done with _bats - Bash Automated Testing System_ (https://github.com/bats-core/bats-core)
+* automated testing is done with _Bats_ - [Bash Automated Testing System](https://github.com/bats-core/bats-core)
 
 ### Installation
 
