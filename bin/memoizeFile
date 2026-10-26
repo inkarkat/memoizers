@@ -1,6 +1,8 @@
 #!/bin/bash
 shopt -qs extglob
 
+${DEBUG:+eval $(debugtrace -o $- -- "$@")}
+
 : ${MEMOIZEFILE_COMMAND_JOINER=;}
 : ${MEMOIZEFILE_EXEC_END=;}
 : ${MEMOIZEFILE_FILE_MARKER='{}'}
@@ -151,6 +153,7 @@ getModificationEpoch()
     stat --dereference --format %Y "${1:?}"
 }
 
+${DEBUG:+eval $(debugtrace --point main -o $- --)}
 
 needsUpdate=
 fileModificationEpoch=-1
