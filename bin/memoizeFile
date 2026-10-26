@@ -199,7 +199,7 @@ fi
 
 if [ "$isRedirect" ]; then
     TMPFILE="$(mktemp --tmpdir "$(basename -- "$0")-XXXXXX" 2>/dev/null || echo "${TMPDIR:-/tmp}/$(basename -- "$0").$$$RANDOM")"
-    trap '${DEBUG:+debugcommand --} rm -f -- "$TMPFILE" 2>/dev/null' EXIT
+    trap '${DEBUG:+debugcommand --module cleanup --} rm -f -- "$TMPFILE" 2>/dev/null' EXIT
 
     update > "$TMPFILE"; status=$?
     if [ $status -eq 0 ]; then
